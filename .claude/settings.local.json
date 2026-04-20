@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc:*)",
+      "Bash(find \"F:/dev/aigc-reducer/cli/tests\" -type f -name \"*.py\" -exec wc -l {} +)",
+      "Bash(uv run:*)",
+      "Bash(uv sync:*)",
+      "Bash(UV_HTTP_TIMEOUT=120 uv sync)",
+      "Bash(UV_HTTP_TIMEOUT=120 UV_LINK_MODE=copy uv sync)"
+    ]
+  }
+}
