@@ -24,3 +24,6 @@ uv.lock
 # Tool output
 aigc_reduced_paper.md
 diff_report.md
+
+# Secrets
+.env
