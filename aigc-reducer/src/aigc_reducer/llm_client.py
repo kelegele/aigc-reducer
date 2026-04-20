@@ -38,6 +38,16 @@ SYSTEM_PROMPT = (
 )
 
 
+# 供应商默认 base_url（可通过 LLM_BASE_URL 覆盖）
+PROVIDER_BASE_URLS: dict[str, str] = {
+    "deepseek": "https://api.deepseek.com/v1",
+    "qwen": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "zhipu": "https://open.bigmodel.cn/api/paas/v4",
+    "openai": "https://api.openai.com/v1",
+    "anthropic": "https://api.anthropic.com",
+}
+
+
 class LLMClient:
     """统一的 LLM 客户端，基于 LiteLLM 支持所有主流供应商。"""
 
@@ -54,7 +64,7 @@ class LLMClient:
           LLM_MODEL    — 模型标识，格式 "供应商/模型名"
           LLM_API_KEY  — API 密钥
         可选：
-          LLM_BASE_URL — 自定义 API 端点
+          LLM_BASE_URL — 自定义 API 端点，不配置则使用供应商默认值
         """
         model = os.environ.get("LLM_MODEL")
         if not model:
@@ -70,7 +80,12 @@ class LLMClient:
         if not api_key:
             raise ValueError("缺少 LLM_API_KEY 环境变量")
 
+        # 优先用环境变量，否则根据供应商前缀匹配默认 URL
         base_url = os.environ.get("LLM_BASE_URL")
+        if not base_url:
+            provider = model.split("/")[0].lower()
+            base_url = PROVIDER_BASE_URLS.get(provider)
+
         return cls(model=model, api_key=api_key, base_url=base_url)
 
     def chat(self, prompt: str, system_prompt: str = SYSTEM_PROMPT) -> str:
