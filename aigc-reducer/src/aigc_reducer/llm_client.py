@@ -96,7 +96,7 @@ class LLMClient:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt},
             ],
-            "max_tokens": 2000,
+            "max_tokens": 4096,
         }
 
         if self._api_key:

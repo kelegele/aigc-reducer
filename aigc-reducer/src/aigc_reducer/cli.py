@@ -2,6 +2,7 @@
 
 import sys
 import os
+import shutil
 import tempfile
 from typing import Dict, List, Optional
 from rich.console import Console
@@ -19,17 +20,42 @@ from aigc_reducer.report import (
 
 console = Console()
 
+# 工作目录结构
+WORKSPACE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "aigc-reducer")
+DIR_RAW = os.path.join(WORKSPACE, "raw-paper")
+DIR_MD = os.path.join(WORKSPACE, "md-paper")
+DIR_OUTPUT = os.path.join(WORKSPACE, "output")
+
+
+def _ensure_dirs():
+    """确保工作目录存在。"""
+    os.makedirs(DIR_RAW, exist_ok=True)
+    os.makedirs(DIR_MD, exist_ok=True)
+    os.makedirs(DIR_OUTPUT, exist_ok=True)
+
 
 def main():
     """CLI 主入口。"""
+    _ensure_dirs()
     console.print(Panel("AIGC 降重工具", subtitle="降低论文 AI 查重率", border_style="cyan"))
+    console.print(f"  原始文件: {DIR_RAW}")
+    console.print(f"  中间产物: {DIR_MD}")
+    console.print(f"  最终输出: {DIR_OUTPUT}")
 
     input_path = _get_input_path()
     paragraphs = _load_document(input_path)
 
+    # 解析后将原始文件复制到 raw-paper
+    _stash_raw(input_path)
+
+    # 解析后的 md 文本存到 md-paper
+    _save_parsed_md(paragraphs, input_path)
+
     style = _select_style()
 
-    detector = AIGCDetector()
+    mode = _select_detect_mode()
+
+    detector = AIGCDetector(mode=mode)
     before_results = detector.analyze_all(paragraphs)
     total_words = sum(len(p.text) for p in paragraphs)
     estimated_rate, needs_processing = print_scan_report(paragraphs, before_results, total_words)
@@ -87,11 +113,14 @@ def main():
 
     after_results = detector.analyze_all(after_paragraphs)
 
-    output_file = "aigc_reduced_paper.md"
-    diff_file = "diff_report.md"
+    basename = _derive_basename(input_path)
+    output_file = os.path.join(DIR_OUTPUT, f"{basename}_reduced.md")
+    diff_file = os.path.join(DIR_OUTPUT, f"{basename}_diff.md")
+    revision_file = os.path.join(DIR_OUTPUT, f"{basename}_revision_report.md")
 
     _save_output(after_paragraphs, output_file)
     _save_diff(before_results, after_results, paragraphs, after_paragraphs, diff_file)
+    _save_revision_report(before_results, after_results, paragraphs, after_paragraphs, revision_file)
 
     print_final_report(before_results, after_results, output_file, diff_file)
 
@@ -163,6 +192,66 @@ def _select_style() -> str:
     choice = Prompt.ask("请选择风格编号", choices=[str(i) for i in range(1, 6)], default="4")
     style_names = list(style_examples.keys())
     return style_names[int(choice) - 1]
+
+
+def _select_detect_mode() -> str:
+    """选择检测模式。"""
+    console.print("\n请选择检测模式：")
+    console.print("  [1] 规则引擎 — 快速，基于文本特征分析（困惑度、突发性等）")
+    console.print("  [2] LLM 反查 — 精准，用大模型模拟商业平台判断（推荐）")
+
+    choice = Prompt.ask("请选择", choices=["1", "2"], default="2")
+    return "llm" if choice == "2" else "rules"
+
+
+def _derive_basename(input_path: str) -> str:
+    """从输入文件名提取基础名（不含扩展名）。"""
+    name = os.path.basename(input_path)
+    return os.path.splitext(name)[0]
+
+
+def _stash_raw(input_path: str):
+    """将原始文件复制到 raw-paper 目录。"""
+    if not os.path.isfile(input_path):
+        return
+    dest = os.path.join(DIR_RAW, os.path.basename(input_path))
+    if os.path.abspath(input_path) != os.path.abspath(dest):
+        shutil.copy2(input_path, dest)
+        console.print(f"[dim]原始文件已备份: {dest}[/dim]")
+
+
+def _save_parsed_md(paragraphs: List[Paragraph], input_path: str):
+    """将解析后的纯文本保存到 md-paper 目录。"""
+    basename = _derive_basename(input_path)
+    md_path = os.path.join(DIR_MD, f"{basename}.md")
+    with open(md_path, "w", encoding="utf-8") as f:
+        for para in paragraphs:
+            f.write(para.text + "\n\n")
+    console.print(f"[dim]解析后文本已保存: {md_path}[/dim]")
+
+
+def _save_revision_report(
+    before_results: List[Dict],
+    after_results: List[Dict],
+    before_paras: List[Paragraph],
+    after_paras: List[Paragraph],
+    revision_file: str,
+):
+    """保存整改建议报告。"""
+    with open(revision_file, "w", encoding="utf-8") as f:
+        f.write("# AIGC 降重整改建议报告\n\n")
+        for i, (bp, ap, br, ar) in enumerate(zip(before_paras, after_paras, before_results, after_results)):
+            if bp.text != ap.text:
+                f.write(f"## 段落 {i}\n\n")
+                f.write(f"**检测分数**: {br['risk_level']} {br['composite_score']}% → {ar['risk_level']} {ar['composite_score']}%\n\n")
+                f.write(f"**检测特征**:\n")
+                for feat in br.get('ai_features', []):
+                    f.write(f"- {feat}\n")
+                f.write(f"\n**原文**:\n\n{bp.text}\n\n")
+                f.write(f"**改写后**:\n\n{ap.text}\n\n")
+                f.write("---\n\n")
+
+    console.print(f"[green]整改建议报告已保存到: {revision_file}[/green]")
 
 
 def _full_semantic_reconstruct(paragraphs: List[Paragraph], style: str) -> List[Paragraph]:

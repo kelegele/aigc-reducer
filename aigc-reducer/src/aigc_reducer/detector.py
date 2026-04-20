@@ -1,6 +1,6 @@
-"""AIGC 检测主入口 — 聚合五大检测器，输出综合评分。"""
+"""AIGC 检测主入口 — 支持规则引擎和 LLM 反查两种模式。"""
 
-from typing import Dict, List
+from typing import Dict, List, Literal, Optional
 from aigc_reducer.parser import Paragraph
 from aigc_reducer.detectors import (
     PerplexityDetector,
@@ -9,6 +9,7 @@ from aigc_reducer.detectors import (
     CognitiveDetector,
     SemanticFingerprintDetector,
 )
+from aigc_reducer.detectors.llm_detector import LLMDetector
 
 
 RISK_LEVELS = [
@@ -20,14 +21,31 @@ RISK_LEVELS = [
 
 
 class AIGCDetector:
-    def __init__(self):
-        self.perplexity = PerplexityDetector()
-        self.burstiness = BurstinessDetector()
-        self.connectors = ConnectorDetector()
-        self.cognitive = CognitiveDetector()
-        self.semantic = SemanticFingerprintDetector()
+    """AIGC 检测主类，支持两种模式。
+
+    Args:
+        mode: "rules" 为纯规则引擎（快速），"llm" 为 LLM 反查（精准）。
+    """
+
+    def __init__(self, mode: Literal["rules", "llm"] = "rules"):
+        self.mode = mode
+
+        if mode == "llm":
+            self.llm_detector = LLMDetector()
+        else:
+            self.perplexity = PerplexityDetector()
+            self.burstiness = BurstinessDetector()
+            self.connectors = ConnectorDetector()
+            self.cognitive = CognitiveDetector()
+            self.semantic = SemanticFingerprintDetector()
 
     def analyze(self, paragraph: Paragraph) -> Dict:
+        if self.mode == "llm":
+            result = self.llm_detector.analyze(paragraph)
+            # 移除内部字段，保持对外接口一致
+            result.pop("_llm_raw", None)
+            return result
+
         p_score = self.perplexity.analyze(paragraph)
         b_score = self.burstiness.analyze(paragraph)
         c_score = self.connectors.analyze(paragraph)
