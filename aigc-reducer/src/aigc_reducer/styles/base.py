@@ -4,6 +4,8 @@ import os
 
 from abc import ABC, abstractmethod
 
+from aigc_reducer.llm_client import LLMClient
+
 
 class RewriteStyle(ABC):
     """改写风格抽象。"""
@@ -22,19 +24,13 @@ class RewriteStyle(ABC):
         pass
 
     def _call_llm(self, prompt: str) -> str:
-        """通过 Anthropic SDK 调用 Claude 进行改写。"""
-        try:
-            from anthropic import Anthropic
+        """通过 OpenAI 兼容 API 调用 LLM 进行改写。
 
-            client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
-            response = client.messages.create(
-                model="claude-sonnet-4-6",
-                max_tokens=2000,
-                system="你是一个专业的学术论文改写助手。请严格按照用户要求的风格改写文本，保持学术严谨性和核心内容不变。只输出改写后的文本，不要添加任何解释。",
-                messages=[{"role": "user", "content": prompt}],
-            )
-            return response.content[0].text.strip()
-        except ImportError:
-            return f"[LLM 改写]: {prompt[:100]}..."
+        支持供应商：DeepSeek / 通义千问 / 智谱 / OpenAI
+        配置方式：环境变量或 ~/.aigc-reducer/config.yaml
+        """
+        try:
+            client = LLMClient.from_env()
+            return client.chat(prompt)
         except Exception as e:
             return f"[LLM 调用失败: {e}]"
