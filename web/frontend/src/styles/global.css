@@ -1,0 +1,10 @@
+/* web/frontend/src/styles/global.css */
+/* 移动端导航菜单适配 */
+@media (max-width: 768px) {
+  .ant-menu-horizontal {
+    display: none !important;
+  }
+  .show-on-mobile {
+    display: inline !important;
+  }
+}
