@@ -1,7 +1,7 @@
 # web/src/aigc_web/services/sms.py
 """验证码生成、存储、发送和校验。"""
 
-import random
+import secrets
 from datetime import datetime, timedelta, timezone
 
 from aigc_web.config import settings
@@ -60,7 +60,7 @@ class VerificationCodeService:
         return True
 
     def _generate_code(self) -> str:
-        return "".join(random.choices("0123456789", k=self.CODE_LENGTH))
+        return "".join(secrets.choice("0123456789") for _ in range(self.CODE_LENGTH))
 
     def _do_send(self, phone: str, code: str) -> None:
         if settings.SMS_PROVIDER == "dev":

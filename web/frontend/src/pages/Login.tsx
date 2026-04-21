@@ -1,5 +1,6 @@
 // web/frontend/src/pages/Login.tsx
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button, Card, Form, Input, message, Typography } from "antd";
 import { MobileOutlined, SafetyOutlined } from "@ant-design/icons";
 import { useAuthStore } from "../stores/auth";
@@ -11,6 +12,7 @@ export default function Login() {
   const [sending, setSending] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const { login, sendSms, loading } = useAuthStore();
+  const navigate = useNavigate();
 
   const handleSendCode = async () => {
     try {
@@ -43,6 +45,7 @@ export default function Login() {
     try {
       await login(values.phone, values.code);
       message.success("登录成功");
+      navigate("/dashboard");
     } catch {
       message.error("登录失败，请检查验证码");
     }

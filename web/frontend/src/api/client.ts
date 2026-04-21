@@ -16,22 +16,24 @@ client.interceptors.request.use((config) => {
 
 let isRefreshing = false;
 let pendingRequests: Array<(token: string) => void> = [];
+const retriedRequests = new WeakSet<object>();
 
 client.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !retriedRequests.has(originalRequest)) {
       const refreshToken = localStorage.getItem("refresh_token");
       if (!refreshToken) {
-        localStorage.clear();
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
         window.location.href = "/login";
         return Promise.reject(error);
       }
 
       if (!isRefreshing) {
         isRefreshing = true;
-        originalRequest._retry = true;
+        retriedRequests.add(originalRequest);
         try {
           const resp = await axios.post("/api/auth/refresh", {
             refresh_token: refreshToken,
@@ -43,7 +45,8 @@ client.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${newToken}`;
           return client(originalRequest);
         } catch {
-          localStorage.clear();
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("refresh_token");
           window.location.href = "/login";
           return Promise.reject(error);
         } finally {
