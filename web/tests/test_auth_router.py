@@ -12,10 +12,6 @@ from aigc_web.dependencies import get_verification_service, set_verification_ser
 from aigc_web.main import app
 from aigc_web.services.sms import VerificationCodeService
 
-# Register auth router for testing
-from aigc_web.routers.auth import router as auth_router
-app.include_router(auth_router)
-
 
 @pytest.fixture
 def client():
