@@ -4,7 +4,7 @@
 from datetime import datetime
 
 from sqlalchemy import DateTime, ForeignKey, Integer, func
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, backref, mapped_column, relationship
 
 from aigc_web.database import Base
 
@@ -24,4 +24,4 @@ class CreditAccount(Base):
         DateTime, default=func.now(), onupdate=func.now(), nullable=False
     )
 
-    user: Mapped["User"] = relationship("User", backref="credit_account")
+    user: Mapped["User"] = relationship("User", backref=backref("credit_account", uselist=False))
