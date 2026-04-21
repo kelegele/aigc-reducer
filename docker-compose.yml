@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: aigc-reducer-postgres
+    environment:
+      POSTGRES_USER: aigc
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-aigc123}
+      POSTGRES_DB: aigc_reducer
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aigc -d aigc_reducer"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql://aigc:${DB_PASSWORD:-aigc123}@db:5432/aigc_reducer
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-production}
+      JWT_ALGORITHM: HS256
+      SMS_PROVIDER: ${SMS_PROVIDER:-dev}
+      CORS_ORIGINS: '["https://your-domain.com"]'
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "alembic upgrade head && uvicorn aigc_web.main:app --host 0.0.0.0 --port 8000"
+
+volumes:
+  pgdata:
