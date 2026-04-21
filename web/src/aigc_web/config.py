@@ -1,0 +1,29 @@
+"""应用配置 — 从环境变量 / .env 文件读取。"""
+
+from pydantic_settings import BaseSettings
+
+
+class Settings(BaseSettings):
+    # 数据库
+    DATABASE_URL: str = "sqlite:///./dev.db"
+
+    # JWT
+    JWT_SECRET_KEY: str = "change-me-in-production"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+
+    # 短信服务（"dev" = 开发模式，验证码打印到控制台）
+    SMS_PROVIDER: str = "dev"
+    SMS_ACCESS_KEY: str = ""
+    SMS_ACCESS_SECRET: str = ""
+    SMS_SIGN_NAME: str = ""
+    SMS_TEMPLATE_CODE: str = ""
+
+    # CORS
+    CORS_ORIGINS: list[str] = ["http://localhost:5173"]
+
+    model_config = {"env_file": ".env", "extra": "ignore"}
+
+
+settings = Settings()
