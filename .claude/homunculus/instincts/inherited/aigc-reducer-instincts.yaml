@@ -1,0 +1,574 @@
+# Instincts generated from https://github.com/kelegele/aigc-reducer
+# Generated: 2026-04-21T21:01:50.459Z
+# Version: 2.0
+# NOTE: This file supplements (does not replace) any existing curated instincts.
+# High-confidence manually curated instincts should be preserved alongside these.
+
+---
+id: aigc-reducer-commit-conventional
+trigger: "when writing a commit message"
+confidence: 0.85
+domain: git
+source: repo-analysis
+source_repo: https://github.com/kelegele/aigc-reducer
+---
+
+# Aigc Reducer Commit Conventional
+
+## Action
+
+Use conventional commit format with prefixes: feat, fix
+
+## Evidence
+
+- 17 commits analyzed
+- Detected conventional commit pattern
+- Examples: feat(web): add User ORM model, fix(web): address code review critical issues
+
+---
+id: aigc-reducer-commit-length
+trigger: "when writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: https://github.com/kelegele/aigc-reducer
+---
+
+# Aigc Reducer Commit Length
+
+## Action
+
+Write moderate-length commit messages (~52 characters)
+
+## Evidence
+
+- Average commit message length: 52 chars
+- Based on 17 commits
+
+---
+id: aigc-reducer-naming-files
+trigger: "when creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/kelegele/aigc-reducer
+---
+
+# Aigc Reducer Naming Files
+
+## Action
+
+Use camelCase naming convention
+
+## Evidence
+
+- Analyzed file naming patterns in repository
+- Dominant pattern: camelCase
+
+---
+id: aigc-reducer-import-relative
+trigger: "when importing modules"
+confidence: 0.75
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/kelegele/aigc-reducer
+---
+
+# Aigc Reducer Import Relative
+
+## Action
+
+Use relative imports for project files
+
+## Evidence
+
+- Import analysis shows relative import pattern
+- Example: import { x } from '../lib/x'
+
+---
+id: aigc-reducer-export-style
+trigger: "when exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/kelegele/aigc-reducer
+---
+
+# Aigc Reducer Export Style
+
+## Action
+
+Prefer default exports
+
+## Evidence
+
+- Export pattern analysis
+- Dominant style: default
+
+---
+id: aigc-reducer-arch-type-based
+trigger: "when adding new code"
+confidence: 0.8
+domain: architecture
+source: repo-analysis
+source_repo: https://github.com/kelegele/aigc-reducer
+---
+
+# Aigc Reducer Arch Type Based
+
+## Action
+
+Place code in the appropriate type folder (components/, services/, utils/, etc.)
+
+## Evidence
+
+- Type-based module organization detected
+- Folders: 
+
+---
+id: aigc-reducer-test-naming
+trigger: "when creating a test file"
+confidence: 0.85
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/kelegele/aigc-reducer
+---
+
+# Aigc Reducer Test Naming
+
+## Action
+
+Name test files using the pattern: *.test.ts
+
+## Evidence
+
+- File pattern: *.test.ts
+- Consistent across test files
+
+---
+id: aigc-reducer-workflow-feature-development
+trigger: "when implementing a new feature"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/kelegele/aigc-reducer
+---
+
+# Aigc Reducer Workflow Feature Development
+
+## Action
+
+Follow the feature-development workflow:
+1. Add feature implementation
+2. Add tests for feature
+3. Update documentation
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~30x per month
+- Files: web/frontend/src/*, web/frontend/*, web/frontend/src/api/*
+
+---
+id: aigc-reducer-workflow-add-backend-service-or-feature
+trigger: "when doing add backend service or feature"
+confidence: 0.65
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/kelegele/aigc-reducer
+---
+
+# Aigc Reducer Workflow Add Backend Service Or Feature
+
+## Action
+
+Follow the add-backend-service-or-feature workflow:
+1. Create or update a file in web/src/aigc_web/services/ (e.g., auth.py, sms.py, token.py)
+2. Create or update a corresponding test file in web/tests/ (e.g., test_auth_service.py, test_sms.py, test_token.py)
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~3x per month
+- Files: web/src/aigc_web/services/*.py, web/tests/test_*.py
+
+---
+id: aigc-reducer-workflow-add-api-endpoint-with-tests
+trigger: "when doing add api endpoint with tests"
+confidence: 0.6
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/kelegele/aigc-reducer
+---
+
+# Aigc Reducer Workflow Add Api Endpoint With Tests
+
+## Action
+
+Follow the add-api-endpoint-with-tests workflow:
+1. Create or update a router file in web/src/aigc_web/routers/ (e.g., auth.py)
+2. Update web/src/aigc_web/main.py to include the new router if needed
+3. Add or update a test file in web/tests/ (e.g., test_auth_router.py)
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~2x per month
+- Files: web/src/aigc_web/routers/*.py, web/src/aigc_web/main.py, web/tests/test_*.py
+
+---
+id: aigc-reducer-workflow-add-orm-model-and-tests
+trigger: "when doing add orm model and tests"
+confidence: 0.6
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/kelegele/aigc-reducer
+---
+
+# Aigc Reducer Workflow Add Orm Model And Tests
+
+## Action
+
+Follow the add-orm-model-and-tests workflow:
+1. Create or update a model file in web/src/aigc_web/models/ (e.g., user.py, credit_account.py)
+2. Add or update test files for models in web/tests/ (e.g., test_models.py)
+3. Update Alembic migration files or setup if needed
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~2x per month
+- Files: web/src/aigc_web/models/*.py, web/tests/test_models.py, web/alembic/*
+
+---
+id: aigc-reducer-workflow-add-frontend-page-or-component
+trigger: "when doing add frontend page or component"
+confidence: 0.6
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/kelegele/aigc-reducer
+---
+
+# Aigc Reducer Workflow Add Frontend Page Or Component
+
+## Action
+
+Follow the add-frontend-page-or-component workflow:
+1. Create a new file in web/frontend/src/pages/ or web/frontend/src/components/ (e.g., Login.tsx, Credits.tsx)
+2. Update web/frontend/src/App.tsx and/or web/frontend/src/main.tsx for routing/layout
+3. Optionally update styles or configuration
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~2x per month
+- Files: web/frontend/src/pages/*.tsx, web/frontend/src/components/*.tsx, web/frontend/src/App.tsx
+
+---
+id: aigc-reducer-instinct-file-naming-camelCase
+trigger: "When creating or renaming a Python file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: kelegele/aigc-reducer
+---
+
+# Aigc Reducer Instinct File Naming CamelCase
+
+## Action
+
+Name the file using camelCase (e.g., userModel.py)
+
+## Evidence
+
+- Pattern in namingConventions.files: camelCase
+
+---
+id: aigc-reducer-instinct-function-naming-camelCase
+trigger: "When defining a Python function"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: kelegele/aigc-reducer
+---
+
+# Aigc Reducer Instinct Function Naming CamelCase
+
+## Action
+
+Name the function using camelCase (e.g., getUserData)
+
+## Evidence
+
+- Pattern in namingConventions.functions: camelCase
+
+---
+id: aigc-reducer-instinct-class-naming-PascalCase
+trigger: "When defining a Python class"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: kelegele/aigc-reducer
+---
+
+# Aigc Reducer Instinct Class Naming PascalCase
+
+## Action
+
+Name the class using PascalCase (e.g., UserModel)
+
+## Evidence
+
+- Pattern in namingConventions.classes: PascalCase
+
+---
+id: aigc-reducer-instinct-constant-naming-SCREAMING_SNAKE_CASE
+trigger: "When defining a constant in Python"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: kelegele/aigc-reducer
+---
+
+# Aigc Reducer Instinct Constant Naming SCREAMING_SNAKE_CASE
+
+## Action
+
+Use SCREAMING_SNAKE_CASE for constant names (e.g., MAX_RETRIES)
+
+## Evidence
+
+- Pattern in namingConventions.constants: SCREAMING_SNAKE_CASE
+
+---
+id: aigc-reducer-instinct-imports-relative
+trigger: "When importing modules in Python"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: kelegele/aigc-reducer
+---
+
+# Aigc Reducer Instinct Imports Relative
+
+## Action
+
+Use relative imports
+
+## Evidence
+
+- Pattern in importStyle: relative
+
+---
+id: aigc-reducer-instinct-exports-default
+trigger: "When exporting from a module"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: kelegele/aigc-reducer
+---
+
+# Aigc Reducer Instinct Exports Default
+
+## Action
+
+Use default export style
+
+## Evidence
+
+- Pattern in exportStyle: default
+
+---
+id: aigc-reducer-instinct-test-file-pattern
+trigger: "When creating a test file for TypeScript/JavaScript"
+confidence: 0.9
+domain: testing
+source: repo-analysis
+source_repo: kelegele/aigc-reducer
+---
+
+# Aigc Reducer Instinct Test File Pattern
+
+## Action
+
+Name the test file with the pattern *.test.ts
+
+## Evidence
+
+- Pattern in testing.filePattern: *.test.ts
+
+---
+id: aigc-reducer-instinct-test-location-mixed
+trigger: "When adding tests"
+confidence: 0.7
+domain: testing
+source: repo-analysis
+source_repo: kelegele/aigc-reducer
+---
+
+# Aigc Reducer Instinct Test Location Mixed
+
+## Action
+
+Place test files either alongside source files or in dedicated test folders (mixed location)
+
+## Evidence
+
+- Pattern in architecture.folderStructure.testLocation: mixed
+
+---
+id: aigc-reducer-instinct-test-type-unit
+trigger: "When writing tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: kelegele/aigc-reducer
+---
+
+# Aigc Reducer Instinct Test Type Unit
+
+## Action
+
+Write unit tests as the primary test type
+
+## Evidence
+
+- Pattern in testing.testTypes: unit
+
+---
+id: aigc-reducer-instinct-commit-conventional
+trigger: "When writing a git commit message"
+confidence: 0.9
+domain: git
+source: repo-analysis
+source_repo: kelegele/aigc-reducer
+---
+
+# Aigc Reducer Instinct Commit Conventional
+
+## Action
+
+Use the conventional commit format: <type>(<scope>): <description>
+
+## Evidence
+
+- Seen in commit: feat(web): add User ORM model
+- Pattern in commits.type: conventional
+
+---
+id: aigc-reducer-instinct-commit-prefixes
+trigger: "When starting a commit message"
+confidence: 0.9
+domain: git
+source: repo-analysis
+source_repo: kelegele/aigc-reducer
+---
+
+# Aigc Reducer Instinct Commit Prefixes
+
+## Action
+
+Begin with 'feat' for features or 'fix' for bug fixes
+
+## Evidence
+
+- Seen in commit: feat(web): add CreditAccount ORM model
+- Pattern in commits.prefixes: [feat, fix]
+
+---
+id: aigc-reducer-instinct-commit-length
+trigger: "When composing a commit message"
+confidence: 0.7
+domain: git
+source: repo-analysis
+source_repo: kelegele/aigc-reducer
+---
+
+# Aigc Reducer Instinct Commit Length
+
+## Action
+
+Keep the commit message around 52 characters on average
+
+## Evidence
+
+- Pattern in commits.averageLength: 52
+
+---
+id: aigc-reducer-instinct-add-backend-service-or-feature
+trigger: "When someone wants to add a new backend service or feature"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: kelegele/aigc-reducer
+---
+
+# Aigc Reducer Instinct Add Backend Service Or Feature
+
+## Action
+
+Create or update a file in web/src/aigc_web/services/ and a corresponding test in web/tests/
+
+## Evidence
+
+- Workflow: add-backend-service-or-feature
+- Seen in commit: feat(web): add verification code service with in-memory storage
+
+---
+id: aigc-reducer-instinct-add-api-endpoint-with-tests
+trigger: "When someone wants to expose a new API endpoint"
+confidence: 0.85
+domain: workflow
+source: repo-analysis
+source_repo: kelegele/aigc-reducer
+---
+
+# Aigc Reducer Instinct Add Api Endpoint With Tests
+
+## Action
+
+Create or update a router file in web/src/aigc_web/routers/, update main.py if needed, and add/update a test in web/tests/
+
+## Evidence
+
+- Workflow: add-api-endpoint-with-tests
+
+---
+id: aigc-reducer-instinct-add-orm-model-and-tests
+trigger: "When someone wants to add a new database model/table"
+confidence: 0.85
+domain: workflow
+source: repo-analysis
+source_repo: kelegele/aigc-reducer
+---
+
+# Aigc Reducer Instinct Add Orm Model And Tests
+
+## Action
+
+Create or update a model file in web/src/aigc_web/models/, add/update tests in web/tests/, and update Alembic migration files if needed
+
+## Evidence
+
+- Workflow: add-orm-model-and-tests
+- Seen in commit: feat(web): add User ORM model
+
+---
+id: aigc-reducer-instinct-add-frontend-page-or-component
+trigger: "When someone wants to add a new page or component to the React frontend"
+confidence: 0.85
+domain: workflow
+source: repo-analysis
+source_repo: kelegele/aigc-reducer
+---
+
+# Aigc Reducer Instinct Add Frontend Page Or Component
+
+## Action
+
+Create a new file in web/frontend/src/pages/ or web/frontend/src/components/, update App.tsx/main.tsx for routing/layout, and optionally update styles/config
+
+## Evidence
+
+- Workflow: add-frontend-page-or-component
+
