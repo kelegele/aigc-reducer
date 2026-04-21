@@ -1,0 +1,6 @@
+interface:
+  display_name: "Aigc Reducer"
+  short_description: "Repo-specific patterns and workflows for aigc-reducer"
+  default_prompt: "Use the aigc-reducer repo skill to follow existing architecture, testing, and workflow conventions."
+policy:
+  allow_implicit_invocation: true
