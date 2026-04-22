@@ -13,6 +13,7 @@ dependencies = [
     "passlib[bcrypt]>=1.7",
     "pydantic-settings>=2.0",
     "httpx>=0.27",
+    "python-alipay-sdk>=3.4",
 ]
 
 [project.optional-dependencies]
