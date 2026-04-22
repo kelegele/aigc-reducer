@@ -217,7 +217,9 @@ docker compose up -d db
 | GET | /api/auth/me | 当前用户信息 |
 | GET | /api/credits/packages | 获取充值套餐列表 |
 | POST | /api/credits/recharge | 创建充值订单 |
+| GET | /api/credits/orders | 用户订单列表（分页、状态筛选） |
 | GET | /api/credits/orders/{id} | 查询订单状态 |
+| GET | /api/credits/orders/{id}/detail | 订单详情（含关联流水） |
 | POST | /api/credits/payment/callback | 支付宝异步回调 |
 | GET | /api/credits/transactions | 积分流水（分页） |
 | GET | /api/credits/balance | 查询余额 |
@@ -226,6 +228,8 @@ docker compose up -d db
 | POST | /api/admin/packages | 创建套餐（admin） |
 | PUT | /api/admin/packages/{id} | 修改套餐（admin） |
 | DELETE | /api/admin/packages/{id} | 删除套餐（admin） |
+| GET | /api/admin/orders | 全部订单列表（admin，分页、搜索、状态筛选） |
+| GET | /api/admin/orders/{id} | 订单详情含用户信息（admin） |
 | GET | /api/admin/users | 用户列表分页搜索（admin） |
 | PUT | /api/admin/users/{id}/credits | 调整积分（admin） |
 | PUT | /api/admin/users/{id}/status | 禁用/启用用户（admin） |

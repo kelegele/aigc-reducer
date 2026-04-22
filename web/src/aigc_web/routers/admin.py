@@ -20,7 +20,9 @@ from aigc_web.schemas.admin import (
     UserListResponse,
 )
 from aigc_web.schemas.auth import MessageResponse
+from aigc_web.schemas.order import AdminOrderDetail, AdminOrderListResponse
 from aigc_web.services import admin as admin_service
+from aigc_web.services import payment as payment_service
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -78,6 +80,33 @@ def delete_package(
         return MessageResponse(message="删除成功")
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+# --- 订单管理 ---
+
+
+@router.get("/orders", response_model=AdminOrderListResponse)
+def list_orders(
+    search: str | None = None,
+    status: str | None = None,
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=100),
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    return payment_service.list_all_orders(db, search=search, status=status, page=page, size=size)
+
+
+@router.get("/orders/{order_id}", response_model=AdminOrderDetail)
+def get_order_detail(
+    order_id: int,
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    try:
+        return payment_service.get_order_detail(db, order_id, user_id=None)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 # --- 用户管理 ---

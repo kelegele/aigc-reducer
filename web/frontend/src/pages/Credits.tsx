@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Typography, Tabs } from "antd";
 import Balance from "./credits/Balance";
 import Packages from "./credits/Packages";
+import Orders from "./credits/Orders";
 import History from "./credits/History";
 
 const { Title } = Typography;
@@ -26,6 +27,11 @@ export default function Credits() {
             key: "packages",
             label: "充值套餐",
             children: <Packages />,
+          },
+          {
+            key: "orders",
+            label: "我的订单",
+            children: <Orders />,
           },
           {
             key: "history",

@@ -8,8 +8,12 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from aigc_web.config import settings
+from sqlalchemy import func as sa_func
+
+from aigc_web.models.credit_transaction import CreditTransaction
 from aigc_web.models.payment_order import PaymentOrder
 from aigc_web.models.recharge_package import RechargePackage
+from aigc_web.models.user import User
 from aigc_web.services import credit as credit_service
 
 
@@ -80,7 +84,12 @@ class AlipayProvider(PaymentProvider):
                 return_url=return_url,
                 notify_url=notify_url,
             )
-        return "https://openapi.alipay.com/gateway.do?" + order_string
+        gateway = (
+            "https://openapi-sandbox.go.alipaydev.com/gateway.do?"
+            if settings.ALIPAY_DEBUG
+            else "https://openapi.alipay.com/gateway.do?"
+        )
+        return gateway + order_string
 
     def verify_callback(self, params: dict) -> bool:
         alipay = self._get_alipay()
@@ -99,10 +108,10 @@ class MockPaymentProvider(PaymentProvider):
         notify_url: str,
         pay_method: str,
     ) -> str:
-        return f"https://mock-pay.example.com/pay?order={out_trade_no}&amount={amount}"
+        return f"/mock-pay?order={out_trade_no}&amount={amount}&return={return_url}"
 
     def verify_callback(self, params: dict) -> bool:
-        return True
+        return params.get("mock_sign") == "ok"
 
 
 _payment_provider: PaymentProvider | None = None
@@ -206,3 +215,128 @@ def query_order_status(db: Session, order_id: int, user_id: int) -> dict:
         "created_at": order.created_at,
         "paid_at": order.paid_at,
     }
+
+
+def list_user_orders(
+    db: Session,
+    user_id: int,
+    status: str | None = None,
+    page: int = 1,
+    size: int = 10,
+) -> dict:
+    """用户订单列表（分页、状态筛选）。"""
+    query = db.query(PaymentOrder).filter_by(user_id=user_id)
+    if status:
+        query = query.filter(PaymentOrder.status == status)
+
+    total = query.count()
+    orders = query.order_by(PaymentOrder.id.desc()).offset((page - 1) * size).limit(size).all()
+
+    items = [
+        {
+            "id": o.id,
+            "out_trade_no": o.out_trade_no,
+            "amount_cents": o.amount_cents,
+            "credits_granted": o.credits_granted,
+            "status": o.status,
+            "pay_method": o.pay_method,
+            "created_at": o.created_at,
+            "paid_at": o.paid_at,
+        }
+        for o in orders
+    ]
+    return {"items": items, "total": total, "page": page, "size": size}
+
+
+def get_order_detail(db: Session, order_id: int, user_id: int | None = None) -> dict:
+    """订单详情。user_id=None 时超管用（不校验归属），否则校验归属当前用户。"""
+    query = db.query(PaymentOrder)
+    if user_id is not None:
+        query = query.filter_by(id=order_id, user_id=user_id)
+    else:
+        query = query.filter_by(id=order_id)
+
+    order = query.first()
+    if order is None:
+        raise ValueError("订单不存在")
+
+    # 查关联积分流水（对账）
+    credit_transaction_id = None
+    if order.status == "paid":
+        tx = db.query(CreditTransaction).filter_by(
+            ref_type="payment_order", ref_id=order.id
+        ).first()
+        if tx:
+            credit_transaction_id = tx.id
+
+    result = {
+        "id": order.id,
+        "out_trade_no": order.out_trade_no,
+        "amount_cents": order.amount_cents,
+        "credits_granted": order.credits_granted,
+        "status": order.status,
+        "pay_method": order.pay_method,
+        "created_at": order.created_at,
+        "paid_at": order.paid_at,
+        "credit_transaction_id": credit_transaction_id,
+        "package_name": order.package.name if order.package else "",
+    }
+
+    # 超管模式：附加用户信息
+    if user_id is None:
+        user = db.query(User).filter_by(id=order.user_id).first()
+        result["user_id"] = order.user_id
+        result["user_phone"] = user.phone if user else ""
+        result["user_nickname"] = user.nickname if user else ""
+
+    return result
+
+
+def list_all_orders(
+    db: Session,
+    search: str | None = None,
+    status: str | None = None,
+    page: int = 1,
+    size: int = 20,
+) -> dict:
+    """超管订单列表，支持按订单号/用户手机号搜索。"""
+    query = db.query(PaymentOrder)
+
+    if status:
+        query = query.filter(PaymentOrder.status == status)
+
+    if search:
+        query = query.join(User, User.id == PaymentOrder.user_id).filter(
+            (PaymentOrder.out_trade_no.contains(search))
+            | (User.phone.contains(search))
+        )
+
+    total = query.count()
+    orders = query.order_by(PaymentOrder.id.desc()).offset((page - 1) * size).limit(size).all()
+
+    items = []
+    for o in orders:
+        tx = None
+        if o.status == "paid":
+            tx = db.query(CreditTransaction).filter_by(
+                ref_type="payment_order", ref_id=o.id
+            ).first()
+
+        user = db.query(User).filter_by(id=o.user_id).first()
+        items.append({
+            "id": o.id,
+            "out_trade_no": o.out_trade_no,
+            "amount_cents": o.amount_cents,
+            "credits_granted": o.credits_granted,
+            "status": o.status,
+            "pay_method": o.pay_method,
+            "created_at": o.created_at,
+            "paid_at": o.paid_at,
+            "credit_transaction_id": tx.id if tx else None,
+            "package_name": o.package.name if o.package else "",
+            "user_id": o.user_id,
+            "user_phone": user.phone if user else "",
+            "user_nickname": user.nickname if user else "",
+        })
+
+    return {"items": items, "total": total, "page": page, "size": size}

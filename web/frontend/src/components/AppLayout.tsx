@@ -19,6 +19,7 @@ import {
   TeamOutlined,
   ShoppingOutlined,
   ControlOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import { useAuthStore } from "../stores/auth";
 
@@ -39,6 +40,7 @@ const getMenuItems = (isAdmin: boolean) => [
           children: [
             { key: "/admin/dashboard", icon: <DashboardOutlined />, label: "数据看板" },
             { key: "/admin/packages", icon: <ShoppingOutlined />, label: "套餐管理" },
+            { key: "/admin/orders", icon: <FileTextOutlined />, label: "订单管理" },
             { key: "/admin/users", icon: <TeamOutlined />, label: "用户管理" },
             { key: "/admin/config", icon: <SettingOutlined />, label: "积分配置" },
           ],

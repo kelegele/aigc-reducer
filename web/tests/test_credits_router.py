@@ -168,7 +168,7 @@ def test_payment_callback(client):
 
     resp = client.post(
         "/api/credits/payment/callback",
-        data={"out_trade_no": "PAY_CALLBACK_TEST"},
+        data={"out_trade_no": "PAY_CALLBACK_TEST", "mock_sign": "ok"},
     )
     assert resp.status_code == 200
     assert resp.json()["message"] == "success"
@@ -208,9 +208,9 @@ def test_payment_callback_idempotent(client):
     db.commit()
 
     # 第一次回调
-    client.post("/api/credits/payment/callback", data={"out_trade_no": "PAY_IDEMPOTENT_TEST"})
+    client.post("/api/credits/payment/callback", data={"out_trade_no": "PAY_IDEMPOTENT_TEST", "mock_sign": "ok"})
     # 第二次回调
-    resp = client.post("/api/credits/payment/callback", data={"out_trade_no": "PAY_IDEMPOTENT_TEST"})
+    resp = client.post("/api/credits/payment/callback", data={"out_trade_no": "PAY_IDEMPOTENT_TEST", "mock_sign": "ok"})
     assert resp.status_code == 200
 
     db.refresh(account)

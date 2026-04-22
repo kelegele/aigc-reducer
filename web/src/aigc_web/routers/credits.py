@@ -19,6 +19,7 @@ from aigc_web.schemas.credits import (
     RechargeResponse,
     TransactionListResponse,
 )
+from aigc_web.schemas.order import OrderDetail, OrderListResponse
 from aigc_web.services import credit as credit_service
 from aigc_web.services import payment as payment_service
 
@@ -58,6 +59,31 @@ def get_order(
 ):
     try:
         return payment_service.query_order_status(db, order_id, user.id)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
+        ) from e
+
+
+@router.get("/orders", response_model=OrderListResponse)
+def list_orders(
+    status: str | None = None,
+    page: int = 1,
+    size: int = 10,
+    user: User = Depends(require_current_user),
+    db: Session = Depends(get_db),
+):
+    return payment_service.list_user_orders(db, user.id, status=status, page=page, size=size)
+
+
+@router.get("/orders/{order_id}/detail", response_model=OrderDetail)
+def get_order_detail(
+    order_id: int,
+    user: User = Depends(require_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        return payment_service.get_order_detail(db, order_id, user_id=user.id)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
