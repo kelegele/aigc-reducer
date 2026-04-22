@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from aigc_web.models.credit_account import CreditAccount
 from aigc_web.models.user import User
 from aigc_web.schemas.auth import LoginResponse, UserResponse
+from aigc_web.services import credit as credit_service
 from aigc_web.services.token import create_access_token, create_refresh_token, decode_token
 
 
@@ -25,6 +26,9 @@ def login_or_register(db: Session, phone: str) -> LoginResponse:
         account = CreditAccount(user_id=user.id)
         db.add(account)
         db.commit()
+
+        # 新人赠送积分
+        credit_service.grant_new_user_bonus(db, user.id)
 
     # 获取积分余额
     account = db.query(CreditAccount).filter(CreditAccount.user_id == user.id).first()

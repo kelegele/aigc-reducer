@@ -76,3 +76,14 @@ def test_get_user_response(db_session):
     resp = auth_service.get_user_response(db_session, user)
     assert resp.credit_balance == 0
     assert resp.phone == "13800138000"
+
+
+def test_login_grants_new_user_bonus(db_session, monkeypatch):
+    from aigc_web import config
+    monkeypatch.setattr(config.settings, "NEW_USER_BONUS_CREDITS", 50)
+
+    from aigc_web.models.credit_account import CreditAccount
+    result = auth_service.login_or_register(db_session, phone="13800138099")
+    account = db_session.query(CreditAccount).filter_by(user_id=result.user.id).one()
+    assert account.balance == 50
+    assert result.user.credit_balance == 50
