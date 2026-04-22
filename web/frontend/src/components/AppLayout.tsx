@@ -16,6 +16,9 @@ import {
   SettingOutlined,
   LogoutOutlined,
   UserOutlined,
+  TeamOutlined,
+  ShoppingOutlined,
+  ControlOutlined,
 } from "@ant-design/icons";
 import { useAuthStore } from "../stores/auth";
 
@@ -28,7 +31,19 @@ const getMenuItems = (isAdmin: boolean) => [
   { key: "/history", icon: <HistoryOutlined />, label: "历史" },
   { key: "/settings", icon: <SettingOutlined />, label: "设置" },
   ...(isAdmin
-    ? [{ key: "/admin/dashboard", icon: <DashboardOutlined />, label: "管理" }]
+    ? [
+        {
+          key: "admin",
+          icon: <ControlOutlined />,
+          label: "管理",
+          children: [
+            { key: "/admin/dashboard", icon: <DashboardOutlined />, label: "数据看板" },
+            { key: "/admin/packages", icon: <ShoppingOutlined />, label: "套餐管理" },
+            { key: "/admin/users", icon: <TeamOutlined />, label: "用户管理" },
+            { key: "/admin/config", icon: <SettingOutlined />, label: "积分配置" },
+          ],
+        },
+      ]
     : []),
 ];
 

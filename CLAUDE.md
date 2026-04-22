@@ -102,6 +102,10 @@ uv run pytest tests/test_detector.py::test_function_name -v
 - 检测器模块化：新增检测维度只需在 `detectors/` 下添加模块并在 `detector.py` 中注册
 - 改写风格模块化：新增风格只需继承 `RewriteStyle` 并在 `rewriter.py` 中注册
 
+## Coding Standards
+
+**规则生成机制**：排查到的一切编码问题（bug、遗漏、不一致、UX 缺陷），修复后都必须提炼为一条通用规范追加到下方对应章节。不仅是修复当前代码，更要防止同类问题再发生。
+
 ## Frontend Coding Rules
 
 ### 错误处理规范
@@ -139,6 +143,14 @@ try {
 所有页面加载数据（useEffect 中调 API）都要处理失败情况：
 - `.then().catch(() => {})` — 静默失败（统计数据等非关键数据）
 - try-catch + message.error — 关键操作失败必须提示用户
+
+## Backend Coding Rules
+
+### 关联保护逻辑要区分状态
+
+删除有关联数据的记录时，保护逻辑要考虑关联记录的状态。未完成的关联（如 pending 订单）不应阻止父记录删除；只有已完成的关联（如 paid 订单）才需要保护。
+
+**原因**：P2 测试时创建了一条 pending 订单关联了套餐#1，导致套餐无法删除。实际上 pending 订单对业务无意义，不应阻止套餐下架或删除。
 
 ## Web Service (from `web/` directory)
 
