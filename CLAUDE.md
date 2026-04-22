@@ -127,10 +127,10 @@ FastAPI 分层架构：`routers/` → `dependencies.py` → `services/` → `mod
 - **config.py** — pydantic-settings，从 `.env` 读取配置
 - **database.py** — SQLAlchemy Base、engine、get_db
 - **dependencies.py** — FastAPI 依赖注入（JWT 认证、SMS 服务）
-- **models/** — User、CreditAccount ORM 模型
-- **schemas/auth.py** — Pydantic 请求/响应模型
-- **services/** — 业务逻辑：token.py（JWT）、sms.py（验证码）、auth.py（登录注册）
-- **routers/auth.py** — /api/auth/* 路由
+- **models/** — User、CreditAccount、RechargePackage、PaymentOrder、CreditTransaction ORM 模型
+- **schemas/** — Pydantic 请求/响应模型：auth.py、credits.py、admin.py
+- **services/** — 业务逻辑：token.py（JWT）、sms.py（验证码）、auth.py（登录注册）、credit.py（积分充值/消费/流水）、payment.py（支付抽象层 + 支付宝 + 订单管理）、admin.py（管理后台：套餐CRUD、用户管理、数据看板、配置）
+- **routers/** — API 路由：auth.py（/api/auth/*）、credits.py（/api/credits/*）、admin.py（/api/admin/*）
 
 ### Web Frontend (from `web/frontend/` directory)
 
@@ -165,3 +165,36 @@ docker compose up -d db
 | POST | /api/auth/login/phone | 手机号登录（自动注册） |
 | POST | /api/auth/refresh | 刷新 token |
 | GET | /api/auth/me | 当前用户信息 |
+| GET | /api/credits/packages | 获取充值套餐列表 |
+| POST | /api/credits/recharge | 创建充值订单 |
+| GET | /api/credits/orders/{id} | 查询订单状态 |
+| POST | /api/credits/payment/callback | 支付宝异步回调 |
+| GET | /api/credits/transactions | 积分流水（分页） |
+| GET | /api/credits/balance | 查询余额 |
+| GET | /api/admin/dashboard | 管理数据看板（admin） |
+| GET | /api/admin/packages | 套餐列表含已下架（admin） |
+| POST | /api/admin/packages | 创建套餐（admin） |
+| PUT | /api/admin/packages/{id} | 修改套餐（admin） |
+| DELETE | /api/admin/packages/{id} | 删除套餐（admin） |
+| GET | /api/admin/users | 用户列表分页搜索（admin） |
+| PUT | /api/admin/users/{id}/credits | 调整积分（admin） |
+| PUT | /api/admin/users/{id}/status | 禁用/启用用户（admin） |
+| GET | /api/admin/config | 获取积分配置（admin） |
+| PUT | /api/admin/config | 更新积分配置（admin） |
+
+### Credits System
+
+积分经济闭环：充值套餐 → 支付订单 → 积分到账 → 积分消费（P3 检测/改写）。
+
+- **支付渠道**：`PaymentProvider` 抽象层，`AlipayProvider`（生产）/ `MockPaymentProvider`（开发，ALIPAY_APP_ID 为空时自动启用）
+- **积分消费**：按 token × `CREDITS_PER_TOKEN` 扣减，余额不足抛 403
+- **新人赠送**：`NEW_USER_BONUS_CREDITS` 配置，注册时自动发放
+- **幂等**：支付回调先查订单状态，已 paid 不重复加积分
+
+### Admin System
+
+超管角色体系，通过 User 模型 `is_admin` 字段控制。超管通过管理后台配置套餐、积分价格、管理用户。
+
+- **权限控制**：`require_admin` 依赖注入，所有 `/api/admin/*` 路由使用此依赖
+- **超管创建**：手动在数据库 `UPDATE users SET is_admin = 1 WHERE phone = 'xxx'`
+- **开发环境**：`DEV_TEST_PHONES` 指定测试手机号、`DEV_BYPASS_PHONE=true` 跳过验证码

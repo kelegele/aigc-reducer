@@ -1,17 +1,15 @@
 import { useEffect, useState } from "react";
 import { Button, Card, Form, InputNumber, message, Typography } from "antd";
-import { getConfig, updateConfig, type ConfigResponse } from "../../api/admin";
+import { getConfig, updateConfig } from "../../api/admin";
 
 const { Title } = Typography;
 
 export default function AdminConfig() {
-  const [config, setConfig] = useState<ConfigResponse | null>(null);
   const [saving, setSaving] = useState(false);
   const [form] = Form.useForm();
 
   useEffect(() => {
     getConfig().then((data) => {
-      setConfig(data);
       form.setFieldsValue(data);
     });
   }, [form]);
@@ -21,7 +19,7 @@ export default function AdminConfig() {
     setSaving(true);
     try {
       const updated = await updateConfig(values);
-      setConfig(updated);
+      form.setFieldsValue(updated);
       message.success("配置已更新（运行时生效，重启后恢复默认）");
     } finally {
       setSaving(false);
