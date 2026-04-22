@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     ALIPAY_RETURN_URL: str = ""
     ALIPAY_DEBUG: bool = True
 
+    # 开发环境测试账号
+    DEV_TEST_PHONES: str = ""
+    DEV_BYPASS_PHONE: bool = False
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 
