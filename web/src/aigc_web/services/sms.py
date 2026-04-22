@@ -44,6 +44,12 @@ class VerificationCodeService:
 
     def verify(self, phone: str, code: str) -> bool:
         """校验验证码。成功后清除，防止重复使用。"""
+        # 开发环境跳过验证码
+        if settings.SMS_PROVIDER == "dev":
+            bypass_phones = [p.strip() for p in settings.DEV_TEST_PHONES.split(",") if p.strip()]
+            if settings.DEV_BYPASS_PHONE or phone in bypass_phones:
+                return True
+
         entry = self._store.get(phone)
         if entry is None:
             return False

@@ -50,3 +50,17 @@ async def require_current_user_response(
 ) -> UserResponse:
     """返回包含积分余额的 UserResponse。"""
     return get_user_response(db, user)
+
+
+async def require_admin(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
+) -> User:
+    """验证当前用户是管理员。非管理员返回 403。"""
+    user = await require_current_user(token=token, db=db)
+    if not user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="需要管理员权限",
+        )
+    return user
