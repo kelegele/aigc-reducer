@@ -22,34 +22,45 @@ export default function AdminPackages() {
   useEffect(() => { fetch(); }, []);
 
   const handleSave = async () => {
-    const values = await form.validateFields();
-    if (editPkg) {
-      await updatePackage(editPkg.id, values);
-      message.success("修改成功");
-    } else {
-      await createPackage(values);
-      message.success("创建成功");
+    try {
+      const values = await form.validateFields();
+      values.price_cents = Math.round(values.price_cents * 100);
+      if (editPkg) {
+        await updatePackage(editPkg.id, values);
+        message.success("修改成功");
+      } else {
+        await createPackage(values);
+        message.success("创建成功");
+      }
+      setModalOpen(false);
+      form.resetFields();
+      setEditPkg(null);
+      fetch();
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      if (detail) message.error(detail);
     }
-    setModalOpen(false);
-    form.resetFields();
-    setEditPkg(null);
-    fetch();
   };
 
   const handleDelete = async (id: number) => {
     Modal.confirm({
       title: "确认删除？",
       onOk: async () => {
-        await deletePackage(id);
-        message.success("删除成功");
-        fetch();
+        try {
+          await deletePackage(id);
+          message.success("删除成功");
+          fetch();
+        } catch (err: unknown) {
+          const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+          if (detail) message.error(detail);
+        }
       },
     });
   };
 
   const openEdit = (pkg: AdminPackageResponse) => {
     setEditPkg(pkg);
-    form.setFieldsValue(pkg);
+    form.setFieldsValue({ ...pkg, price_cents: pkg.price_cents / 100 });
     setModalOpen(true);
   };
 
@@ -62,7 +73,7 @@ export default function AdminPackages() {
   const columns: ColumnsType<AdminPackageResponse> = [
     { title: "ID", dataIndex: "id", key: "id", width: 60 },
     { title: "名称", dataIndex: "name", key: "name" },
-    { title: "价格(分)", dataIndex: "price_cents", key: "price_cents" },
+    { title: "价格(元)", dataIndex: "price_cents", key: "price_cents", render: (v: number) => `¥${(v / 100).toFixed(2)}` },
     { title: "积分", dataIndex: "credits", key: "credits" },
     { title: "赠送", dataIndex: "bonus_credits", key: "bonus_credits" },
     { title: "排序", dataIndex: "sort_order", key: "sort_order", width: 80 },
@@ -99,8 +110,8 @@ export default function AdminPackages() {
           <Form.Item name="name" label="名称" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="price_cents" label="价格(分)" rules={[{ required: true }]}>
-            <InputNumber min={1} style={{ width: "100%" }} />
+          <Form.Item name="price_cents" label="价格(元)" rules={[{ required: true }]}>
+            <InputNumber min={0.01} step={1} precision={2} style={{ width: "100%" }} />
           </Form.Item>
           <Form.Item name="credits" label="积分" rules={[{ required: true }]}>
             <InputNumber min={1} style={{ width: "100%" }} />

@@ -19,21 +19,31 @@ export default function AdminUsers() {
   useEffect(() => { fetch(); }, [search]);
 
   const handleAdjust = async () => {
-    await adjustCredits(adjustModal.userId, adjustAmount, adjustRemark || "管理员调整");
-    message.success("积分调整成功");
-    setAdjustModal({ userId: 0, visible: false });
-    setAdjustAmount(0);
-    setAdjustRemark("");
-    fetch();
+    try {
+      await adjustCredits(adjustModal.userId, adjustAmount, adjustRemark || "管理员调整");
+      message.success("积分调整成功");
+      setAdjustModal({ userId: 0, visible: false });
+      setAdjustAmount(0);
+      setAdjustRemark("");
+      fetch();
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      if (detail) message.error(detail);
+    }
   };
 
   const handleToggleStatus = async (userId: number, isActive: boolean) => {
     Modal.confirm({
       title: `确认${isActive ? "禁用" : "启用"}该用户？`,
       onOk: async () => {
-        await setUserStatus(userId, !isActive);
-        message.success("操作成功");
-        fetch();
+        try {
+          await setUserStatus(userId, !isActive);
+          message.success("操作成功");
+          fetch();
+        } catch (err: unknown) {
+          const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+          if (detail) message.error(detail);
+        }
       },
     });
   };

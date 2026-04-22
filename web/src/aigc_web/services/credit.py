@@ -42,8 +42,8 @@ def consume(
     ref_id: int | None = None,
     remark: str | None = None,
 ) -> int:
-    """消费积分。按 token_count * CREDITS_PER_TOKEN 扣减。返回消耗积分数。"""
-    cost = int(token_count * settings.CREDITS_PER_TOKEN)
+    """消费积分。按 token_count / 1000 * CREDITS_PER_TOKEN 扣减。返回消耗积分数。"""
+    cost = max(1, int(token_count / 1000 * settings.CREDITS_PER_TOKEN))
     account = db.query(CreditAccount).filter_by(user_id=user_id).with_for_update().one()
 
     if account.balance < cost:

@@ -37,8 +37,9 @@ export default function Packages() {
           setPayingOrderId(result.order_id);
           window.location.href = result.pay_url;
           startPolling(result.order_id);
-        } catch {
-          message.error("创建订单失败");
+        } catch (err: unknown) {
+          const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+          message.error(detail || "创建订单失败");
         }
       },
     });

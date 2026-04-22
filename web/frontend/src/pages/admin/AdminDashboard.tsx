@@ -19,7 +19,7 @@ export default function AdminDashboard() {
   const [data, setData] = useState<DashboardResponse | null>(null);
 
   useEffect(() => {
-    getDashboard().then(setData);
+    getDashboard().then(setData).catch(() => {});
   }, []);
 
   const topColumns: ColumnsType<TopUserEntry> = [
@@ -42,7 +42,12 @@ export default function AdminDashboard() {
           <Card><Statistic title="总发放积分" value={data?.total_credits_granted ?? 0} prefix={<ThunderboltOutlined />} /></Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
-          <Card><Statistic title="今日新增" value={data?.today_new_users ?? 0} prefix={<RiseOutlined />} /></Card>
+          <Card><Statistic title="总消费积分" value={data?.total_credits_consumed ?? 0} prefix={<ThunderboltOutlined />} /></Card>
+        </Col>
+      </Row>
+      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+        <Col xs={24} sm={12}>
+          <Card><Statistic title="今日新增用户" value={data?.today_new_users ?? 0} prefix={<RiseOutlined />} /></Card>
         </Col>
       </Row>
 

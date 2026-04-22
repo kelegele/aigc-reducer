@@ -102,6 +102,44 @@ uv run pytest tests/test_detector.py::test_function_name -v
 - 检测器模块化：新增检测维度只需在 `detectors/` 下添加模块并在 `detector.py` 中注册
 - 改写风格模块化：新增风格只需继承 `RewriteStyle` 并在 `rewriter.py` 中注册
 
+## Frontend Coding Rules
+
+### 错误处理规范
+
+所有涉及 API 调用的用户操作（按钮点击、表单提交）**必须**使用 try-catch，并在 catch 中提取后端 `response.data.detail` 展示给用户。禁止使用泛泛的默认错误信息。
+
+```typescript
+try {
+  await someApiCall();
+  message.success("操作成功");
+} catch (err: unknown) {
+  const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+  if (detail) message.error(detail);
+}
+```
+
+**原因**：后端所有错误都通过 `{ "detail": "具体原因" }` 返回。前端吞掉 detail 显示"操作失败"会让用户无法排查问题，也让开发调试困难。
+
+### 前后端字段一致性
+
+新增后端 schema 字段时，**必须同步**：
+1. 后端 `schemas/` 中的 Pydantic model
+2. 后端 `services/` 中构造 response 的代码（所有 return 该 schema 的地方）
+3. 前端 `api/` 中的 TypeScript interface
+4. 前端页面中使用该字段的代码
+
+**检查方法**：添加字段后 grep 后端所有 `UserResponse(`、`ConfigResponse(` 等构造调用，确保新字段被赋值。
+
+### 金额展示
+
+后端统一用**分**（int）存储和传输。前端展示时转换为**元**（÷100），输入时转换回分（×100）。禁止在界面上直接显示"分"。
+
+### 数据加载
+
+所有页面加载数据（useEffect 中调 API）都要处理失败情况：
+- `.then().catch(() => {})` — 静默失败（统计数据等非关键数据）
+- try-catch + message.error — 关键操作失败必须提示用户
+
 ## Web Service (from `web/` directory)
 
 ```bash

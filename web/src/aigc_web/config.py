@@ -25,7 +25,7 @@ class Settings(BaseSettings):
 
     # 积分配置
     NEW_USER_BONUS_CREDITS: int = 0
-    CREDITS_PER_TOKEN: float = 1.0
+    CREDITS_PER_TOKEN: float = 1.0  # 每 1000 Token 消耗积分数
 
     # 支付宝配置
     ALIPAY_APP_ID: str = ""

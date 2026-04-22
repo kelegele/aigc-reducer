@@ -28,6 +28,7 @@ class UserResponse(BaseModel):
     nickname: str
     avatar_url: str | None
     is_active: bool
+    is_admin: bool = False
     credit_balance: int = 0
 
     model_config = {"from_attributes": True}

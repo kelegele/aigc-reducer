@@ -46,6 +46,7 @@ def login_or_register(db: Session, phone: str) -> LoginResponse:
             nickname=user.nickname,
             avatar_url=user.avatar_url,
             is_active=user.is_active,
+            is_admin=user.is_admin,
             credit_balance=balance,
         ),
     )
@@ -80,5 +81,6 @@ def get_user_response(db: Session, user: User) -> UserResponse:
         nickname=user.nickname,
         avatar_url=user.avatar_url,
         is_active=user.is_active,
+        is_admin=user.is_admin,
         credit_balance=account.balance if account else 0,
     )
