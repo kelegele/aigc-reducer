@@ -34,8 +34,9 @@ export default function Login() {
           return prev - 1;
         });
       }, 1000);
-    } catch {
-      message.error("发送失败，请稍后重试");
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      message.error(detail || "发送失败，请稍后重试");
     } finally {
       setSending(false);
     }
@@ -46,8 +47,9 @@ export default function Login() {
       await login(values.phone, values.code);
       message.success("登录成功");
       navigate("/dashboard");
-    } catch {
-      message.error("登录失败，请检查验证码");
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      message.error(detail || "登录失败，请检查验证码");
     }
   };
 
