@@ -23,6 +23,18 @@ class Settings(BaseSettings):
     # CORS
     CORS_ORIGINS: list[str] = ["http://localhost:5173"]
 
+    # 积分配置
+    NEW_USER_BONUS_CREDITS: int = 0
+    CREDITS_PER_TOKEN: float = 1.0
+
+    # 支付宝配置
+    ALIPAY_APP_ID: str = ""
+    ALIPAY_PRIVATE_KEY: str = ""
+    ALIPAY_PUBLIC_KEY: str = ""
+    ALIPAY_NOTIFY_URL: str = ""
+    ALIPAY_RETURN_URL: str = ""
+    ALIPAY_DEBUG: bool = True
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 
