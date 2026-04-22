@@ -7,6 +7,7 @@ export interface UserResponse {
   nickname: string;
   avatar_url: string | null;
   is_active: boolean;
+  is_admin: boolean;
   credit_balance: number;
 }
 

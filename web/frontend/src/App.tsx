@@ -7,6 +7,10 @@ import Dashboard from "./pages/Dashboard";
 import Credits from "./pages/Credits";
 import History from "./pages/History";
 import Settings from "./pages/Settings";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminPackages from "./pages/admin/AdminPackages";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminConfig from "./pages/admin/AdminConfig";
 import AppLayout from "./components/AppLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -27,6 +31,10 @@ export default function App() {
             <Route path="/credits" element={<Credits />} />
             <Route path="/history" element={<History />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/packages" element={<AdminPackages />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/config" element={<AdminConfig />} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

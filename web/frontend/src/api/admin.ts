@@ -1,0 +1,136 @@
+// web/frontend/src/api/admin.ts
+import client from "./client";
+
+// --- Types ---
+
+export interface AdminPackageResponse {
+  id: number;
+  name: string;
+  price_cents: number;
+  credits: number;
+  bonus_credits: number;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface PackageCreateRequest {
+  name: string;
+  price_cents: number;
+  credits: number;
+  bonus_credits?: number;
+  sort_order?: number;
+  is_active?: boolean;
+}
+
+export interface PackageUpdateRequest {
+  name?: string;
+  price_cents?: number;
+  credits?: number;
+  bonus_credits?: number;
+  sort_order?: number;
+  is_active?: boolean;
+}
+
+export interface AdminUserResponse {
+  id: number;
+  phone: string;
+  nickname: string;
+  is_active: boolean;
+  is_admin: boolean;
+  created_at: string;
+  credit_balance: number;
+  total_recharged: number;
+  total_consumed: number;
+}
+
+export interface UserListResponse {
+  items: AdminUserResponse[];
+  total: number;
+  page: number;
+  size: number;
+}
+
+export interface TopUserEntry {
+  user_id: number;
+  nickname: string;
+  phone: string;
+  amount: number;
+}
+
+export interface DashboardResponse {
+  total_users: number;
+  total_revenue_cents: number;
+  total_credits_granted: number;
+  total_credits_consumed: number;
+  today_new_users: number;
+  top_recharge_users: TopUserEntry[];
+  top_consume_users: TopUserEntry[];
+}
+
+export interface ConfigResponse {
+  credits_per_token: number;
+  new_user_bonus_credits: number;
+}
+
+// --- API Functions ---
+
+export async function getDashboard(): Promise<DashboardResponse> {
+  const resp = await client.get<DashboardResponse>("/admin/dashboard");
+  return resp.data;
+}
+
+export async function listAllPackages(): Promise<AdminPackageResponse[]> {
+  const resp = await client.get<AdminPackageResponse[]>("/admin/packages");
+  return resp.data;
+}
+
+export async function createPackage(req: PackageCreateRequest): Promise<AdminPackageResponse> {
+  const resp = await client.post<AdminPackageResponse>("/admin/packages", req);
+  return resp.data;
+}
+
+export async function updatePackage(
+  id: number, req: PackageUpdateRequest
+): Promise<AdminPackageResponse> {
+  const resp = await client.put<AdminPackageResponse>(`/admin/packages/${id}`, req);
+  return resp.data;
+}
+
+export async function deletePackage(id: number): Promise<void> {
+  await client.delete(`/admin/packages/${id}`);
+}
+
+export async function listUsers(params?: {
+  search?: string;
+  page?: number;
+  size?: number;
+}): Promise<UserListResponse> {
+  const resp = await client.get<UserListResponse>("/admin/users", { params });
+  return resp.data;
+}
+
+export async function adjustCredits(
+  userId: number, amount: number, remark: string
+): Promise<void> {
+  await client.put(`/admin/users/${userId}/credits`, { amount, remark });
+}
+
+export async function setUserStatus(
+  userId: number, isActive: boolean
+): Promise<void> {
+  await client.put(`/admin/users/${userId}/status`, { is_active: isActive });
+}
+
+export async function getConfig(): Promise<ConfigResponse> {
+  const resp = await client.get<ConfigResponse>("/admin/config");
+  return resp.data;
+}
+
+export async function updateConfig(req: {
+  credits_per_token?: number;
+  new_user_bonus_credits?: number;
+}): Promise<ConfigResponse> {
+  const resp = await client.put<ConfigResponse>("/admin/config", req);
+  return resp.data;
+}
