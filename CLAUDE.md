@@ -252,3 +252,7 @@ docker compose up -d db
 - **权限控制**：`require_admin` 依赖注入，所有 `/api/admin/*` 路由使用此依赖
 - **超管创建**：通过 `ADMIN_PHONE` 环境变量指定手机号，登录时自动提升为超管
 - **开发环境**：`DEV_TEST_PHONES` 指定测试手机号、`DEV_BYPASS_PHONE=true` 跳过验证码
+
+### Tech Debt
+
+- **待支付订单过期**：当前 pending 订单无自动关闭机制，需加定时任务（如 30 分钟未支付自动关闭）
