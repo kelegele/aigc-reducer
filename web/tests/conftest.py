@@ -6,6 +6,14 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from aigc_web.database import Base, get_db
+from aigc_web.config import settings
+
+
+@pytest.fixture(autouse=True)
+def _disable_dev_bypass(monkeypatch):
+    """确保测试环境不跳过验证码校验。"""
+    monkeypatch.setattr(settings, "DEV_BYPASS_PHONE", False)
+    monkeypatch.setattr(settings, "DEV_TEST_PHONES", "")
 
 
 @pytest.fixture
