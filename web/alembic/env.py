@@ -9,7 +9,7 @@ from sqlalchemy import engine_from_config, pool
 
 from aigc_web.config import settings
 from aigc_web.database import Base
-from aigc_web.models import credit_account, credit_transaction, payment_order, recharge_package, user  # noqa: F401
+from aigc_web.models import credit_account, credit_transaction, payment_order, recharge_package, reduction_paragraph, reduction_task, user  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
