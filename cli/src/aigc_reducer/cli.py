@@ -9,9 +9,10 @@ from rich.console import Console
 from rich.prompt import Prompt, Confirm
 from rich.panel import Panel
 
-from aigc_reducer.parser import parse_document, Paragraph
-from aigc_reducer.detector import AIGCDetector
-from aigc_reducer.rewriter import Rewriter, list_styles
+from aigc_reducer_core.parser import parse_document, Paragraph
+from aigc_reducer_core.llm_client import LLMClient
+from aigc_reducer_core.detector import AIGCDetector
+from aigc_reducer_core.rewriter import Rewriter, list_styles
 from aigc_reducer.report import (
     print_scan_report,
     print_revision_progress,
@@ -55,7 +56,10 @@ def main():
 
     mode = _select_detect_mode()
 
-    detector = AIGCDetector(mode=mode)
+    # 创建 LLM 客户端（llm 检测模式和改写都需要）
+    llm_client = LLMClient.from_env()
+
+    detector = AIGCDetector(mode=mode, llm_client=llm_client)
     before_results = detector.analyze_all(paragraphs)
     total_words = sum(len(p.text) for p in paragraphs)
     estimated_rate, needs_processing = print_scan_report(paragraphs, before_results, total_words)
@@ -67,11 +71,11 @@ def main():
     do_full_rewrite = Confirm.ask("\n是否进行全量语义重构？（推荐：可进一步降低整体 AI 特征值）", default=False)
 
     if do_full_rewrite:
-        paragraphs = _full_semantic_reconstruct(paragraphs, style)
+        paragraphs = _full_semantic_reconstruct(paragraphs, style, llm_client)
         before_results = detector.analyze_all(paragraphs)
         estimated_rate, needs_processing = print_scan_report(paragraphs, before_results, total_words)
 
-    rewriter = Rewriter(style)
+    rewriter = Rewriter(style, llm_client=llm_client)
     after_paragraphs = paragraphs.copy()
     after_results = before_results.copy()
 
@@ -254,12 +258,12 @@ def _save_revision_report(
     console.print(f"[green]整改建议报告已保存到: {revision_file}[/green]")
 
 
-def _full_semantic_reconstruct(paragraphs: List[Paragraph], style: str) -> List[Paragraph]:
+def _full_semantic_reconstruct(paragraphs: List[Paragraph], style: str, llm_client: LLMClient) -> List[Paragraph]:
     """全量语义重构 — 打散全文骨架并重建逻辑。"""
     console.print("\n[green]正在进行全量语义重构...[/green]")
 
     full_text = "\n\n".join(p.text for p in paragraphs)
-    rewriter = Rewriter(style)
+    rewriter = Rewriter(style, llm_client=llm_client)
 
     prompt = (
         f"请对以下学术论文全文进行深度语义重构：打散原有句子骨架，重建逻辑框架，"

@@ -1,7 +1,7 @@
 # tests/test_detector.py
 import pytest
-from aigc_reducer.parser import Paragraph
-from aigc_reducer.detectors import (
+from aigc_reducer_core.parser import Paragraph
+from aigc_reducer_core.detectors import (
     PerplexityDetector,
     BurstinessDetector,
     ConnectorDetector,
@@ -97,7 +97,7 @@ class TestSemanticFingerprintDetector:
 
 class TestAIGCDetector:
     def setup_method(self):
-        from aigc_reducer.detector import AIGCDetector
+        from aigc_reducer_core.detector import AIGCDetector
         self.detector = AIGCDetector()
 
     def test_composite_score_classification(self):

@@ -2,13 +2,22 @@
 """集成测试 — 验证完整流程。"""
 
 import pytest
-from aigc_reducer.parser import parse_document, Paragraph
-from aigc_reducer.detector import AIGCDetector
-from aigc_reducer.rewriter import Rewriter
+from unittest.mock import MagicMock
+from aigc_reducer_core.parser import parse_document, Paragraph
+from aigc_reducer_core.llm_client import LLMClient
+from aigc_reducer_core.detector import AIGCDetector
+from aigc_reducer_core.rewriter import Rewriter
+
+
+@pytest.fixture
+def mock_llm_client():
+    client = MagicMock(spec=LLMClient)
+    client.chat.return_value = "这是 mock 的改写结果文本。"
+    return client
 
 
 class TestIntegration:
-    def test_full_pipeline(self, tmp_path):
+    def test_full_pipeline(self, tmp_path, mock_llm_client):
         """测试完整降重流程：解析 → 检测 → 改写 → 重检测。"""
         paper = tmp_path / "test_paper.md"
         paper.write_text(
@@ -25,7 +34,7 @@ class TestIntegration:
         results = detector.analyze_all(paragraphs)
         assert results[0]["risk_level"] in ("高风险", "中高", "中风险")
 
-        rewriter = Rewriter("学术人文化")
+        rewriter = Rewriter("学术人文化", llm_client=mock_llm_client)
         rewritten = rewriter.rewrite_all(paragraphs, results)
         assert len(rewritten) == 2
 

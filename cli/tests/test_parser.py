@@ -1,6 +1,6 @@
 # tests/test_parser.py
 import pytest
-from aigc_reducer.parser import parse_document, Paragraph
+from aigc_reducer_core.parser import parse_document, Paragraph
 
 
 class TestMarkdownParser:
