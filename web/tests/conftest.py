@@ -14,6 +14,7 @@ def _disable_dev_bypass(monkeypatch):
     """确保测试环境不跳过验证码校验。"""
     monkeypatch.setattr(settings, "DEV_BYPASS_PHONE", False)
     monkeypatch.setattr(settings, "DEV_TEST_PHONES", "")
+    monkeypatch.setattr(settings, "SITE_URL", "http://localhost:5173")
 
 
 @pytest.fixture

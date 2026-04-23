@@ -178,7 +178,6 @@ def test_alipay_provider_query_trade_paid(mock_settings):
     mock_settings.ALIPAY_APP_ID = "test-id"
     mock_settings.ALIPAY_PRIVATE_KEY = "key"
     mock_settings.ALIPAY_PUBLIC_KEY = "pub"
-    mock_settings.ALIPAY_DEBUG = True
 
     from aigc_web.services.payment import AlipayProvider
     provider = AlipayProvider()
@@ -200,7 +199,6 @@ def test_alipay_provider_query_trade_not_paid(mock_settings):
     mock_settings.ALIPAY_APP_ID = "test-id"
     mock_settings.ALIPAY_PRIVATE_KEY = "key"
     mock_settings.ALIPAY_PUBLIC_KEY = "pub"
-    mock_settings.ALIPAY_DEBUG = True
 
     from aigc_web.services.payment import AlipayProvider
     provider = AlipayProvider()
@@ -219,7 +217,6 @@ def test_alipay_provider_query_trade_finished(mock_settings):
     mock_settings.ALIPAY_APP_ID = "test-id"
     mock_settings.ALIPAY_PRIVATE_KEY = "key"
     mock_settings.ALIPAY_PUBLIC_KEY = "pub"
-    mock_settings.ALIPAY_DEBUG = True
 
     from aigc_web.services.payment import AlipayProvider
     provider = AlipayProvider()

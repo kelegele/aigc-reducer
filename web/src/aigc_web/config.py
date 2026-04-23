@@ -36,9 +36,6 @@ class Settings(BaseSettings):
     ALIPAY_APP_ID: str = ""
     ALIPAY_PRIVATE_KEY: str = ""
     ALIPAY_PUBLIC_KEY: str = ""
-    ALIPAY_NOTIFY_URL: str = ""
-    ALIPAY_RETURN_URL: str = ""
-    ALIPAY_DEBUG: bool = True
 
     # 订单超时
     ORDER_TIMEOUT_MINUTES: int = 15  # pending 订单超时时间（分钟）

@@ -56,7 +56,7 @@ class AlipayProvider(PaymentProvider):
                 app_private_key_string=settings.ALIPAY_PRIVATE_KEY,
                 alipay_public_key_string=settings.ALIPAY_PUBLIC_KEY,
                 sign_type="RSA2",
-                debug=settings.ALIPAY_DEBUG,
+                debug=settings.alipay_debug,
             )
         return self._alipay
 
@@ -91,8 +91,8 @@ class AlipayProvider(PaymentProvider):
                 timeout_express=f"{settings.ORDER_TIMEOUT_MINUTES}m",
             )
         gateway = (
-            "https://openapi-sandbox.go.alipaydev.com/gateway.do?"
-            if settings.ALIPAY_DEBUG
+            "https://openapi-sandbox.dl.alipaydev.com/gateway.do?"
+            if settings.alipay_debug
             else "https://openapi.alipay.com/gateway.do?"
         )
         return gateway + order_string
@@ -192,8 +192,8 @@ def create_recharge_order(
         out_trade_no=out_trade_no,
         amount=pkg.price_cents,
         subject=f"积分充值-{pkg.name}",
-        return_url=settings.ALIPAY_RETURN_URL,
-        notify_url=settings.ALIPAY_NOTIFY_URL,
+        return_url=settings.get_return_url(order.id),
+        notify_url=settings.get_notify_url(),
         pay_method=pay_method,
     )
 
