@@ -45,6 +45,7 @@ const getMenuItems = (isAdmin: boolean) => [
             { key: "/admin/packages", icon: <ShoppingOutlined />, label: "套餐管理" },
             { key: "/admin/orders", icon: <FileTextOutlined />, label: "订单管理" },
             { key: "/admin/users", icon: <TeamOutlined />, label: "用户管理" },
+            { key: "/admin/transactions", icon: <HistoryOutlined />, label: "流水管理" },
             { key: "/admin/config", icon: <SettingOutlined />, label: "积分配置" },
           ],
         },

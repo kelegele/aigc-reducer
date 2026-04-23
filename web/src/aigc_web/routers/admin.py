@@ -11,6 +11,7 @@ from aigc_web.models.user import User
 from aigc_web.schemas.admin import (
     AdjustCreditsRequest,
     AdminPackageResponse,
+    AdminTransactionListResponse,
     ConfigResponse,
     ConfigUpdateRequest,
     DashboardResponse,
@@ -171,3 +172,18 @@ def update_config(
         new_user_bonus_credits=req.new_user_bonus_credits,
     )
     return admin_service.get_config()
+
+
+# --- 流水管理 ---
+
+@router.get("/transactions", response_model=AdminTransactionListResponse)
+def list_transactions(
+    user_id: int | None = None,
+    type: str | None = None,
+    search: str | None = None,
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=100),
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    return admin_service.list_transactions(db, user_id=user_id, type_filter=type, search=search, page=page, size=size)

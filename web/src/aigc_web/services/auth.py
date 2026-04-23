@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from aigc_web.config import settings
 from aigc_web.models.credit_account import CreditAccount
-from aigc_web.models.user import User
+from aigc_web.models.user import User, generate_user_id
 from aigc_web.schemas.auth import LoginResponse, UserResponse
 from aigc_web.services import credit as credit_service
 from aigc_web.services.token import create_access_token, create_refresh_token, decode_token
@@ -25,6 +25,7 @@ def login_or_register(db: Session, phone: str) -> LoginResponse:
     user = db.query(User).filter(User.phone == phone).first()
     if user is None:
         user = User(
+            id=generate_user_id(),
             phone=phone,
             nickname=f"用户{phone[-4:]}",
         )

@@ -12,6 +12,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminPackages from "./pages/admin/AdminPackages";
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminUsers from "./pages/admin/AdminUsers";
+import AdminTransactions from "./pages/admin/AdminTransactions";
 import AdminConfig from "./pages/admin/AdminConfig";
 import MockPay from "./pages/MockPay";
 import AppLayout from "./components/AppLayout";
@@ -84,6 +85,7 @@ export default function App() {
             <Route path="/admin/packages" element={<AdminPackages />} />
             <Route path="/admin/orders" element={<AdminOrders />} />
             <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/transactions" element={<AdminTransactions />} />
             <Route path="/admin/config" element={<AdminConfig />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

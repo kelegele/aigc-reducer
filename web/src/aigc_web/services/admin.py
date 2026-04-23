@@ -74,6 +74,9 @@ def list_users(
     items = []
     for user in users:
         account = db.query(CreditAccount).filter_by(user_id=user.id).first()
+        total_recharge_cents = db.query(sa_func.coalesce(sa_func.sum(PaymentOrder.amount_cents), 0)).filter(
+            PaymentOrder.user_id == user.id, PaymentOrder.status == "paid"
+        ).scalar()
         items.append({
             "id": user.id,
             "phone": user.phone,
@@ -84,6 +87,7 @@ def list_users(
             "credit_balance": account.balance if account else 0,
             "total_recharged": account.total_recharged if account else 0,
             "total_consumed": account.total_consumed if account else 0,
+            "total_recharge_cents": total_recharge_cents,
         })
     return {"items": items, "total": total, "page": page, "size": size}
 
@@ -193,3 +197,53 @@ def update_config(settings_obj, credits_per_token: float | None = None, new_user
         settings_obj.CREDITS_PER_TOKEN = credits_per_token
     if new_user_bonus_credits is not None:
         settings_obj.NEW_USER_BONUS_CREDITS = new_user_bonus_credits
+
+
+# --- 流水管理 ---
+
+def list_transactions(
+    db: Session,
+    user_id: int | None = None,
+    type_filter: str | None = None,
+    search: str | None = None,
+    page: int = 1,
+    size: int = 20,
+) -> dict:
+    """管理后台流水查询，支持按用户、类型、手机号搜索。"""
+    query = db.query(CreditTransaction)
+
+    if user_id is not None:
+        query = query.filter(CreditTransaction.user_id == user_id)
+    if type_filter:
+        query = query.filter(CreditTransaction.type == type_filter)
+    if search:
+        query = query.join(User, User.id == CreditTransaction.user_id).filter(
+            User.phone.contains(search)
+        )
+
+    total = query.count()
+    rows = (
+        query.order_by(CreditTransaction.id.desc())
+        .offset((page - 1) * size)
+        .limit(size)
+        .all()
+    )
+
+    items = []
+    for tx in rows:
+        user = db.query(User).filter_by(id=tx.user_id).first()
+        items.append({
+            "id": tx.id,
+            "trade_no": tx.trade_no,
+            "user_id": tx.user_id,
+            "user_phone": user.phone if user else "",
+            "user_nickname": user.nickname if user else "",
+            "type": tx.type,
+            "amount": tx.amount,
+            "balance_after": tx.balance_after,
+            "ref_type": tx.ref_type,
+            "ref_id": tx.ref_id,
+            "remark": tx.remark,
+            "created_at": tx.created_at,
+        })
+    return {"items": items, "total": total, "page": page, "size": size}

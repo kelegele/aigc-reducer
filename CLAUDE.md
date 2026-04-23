@@ -226,7 +226,7 @@ op.create_unique_constraint(None, 'table', ['col'])
 uv sync
 
 # 启动后端（开发模式）
-uv run uvicorn aigc_web.main:app --reload --port 8000
+uv run uvicorn aigc_web.main:app --port 9000
 
 # 运行后端测试
 uv run pytest tests/ -v
@@ -266,12 +266,7 @@ npm run build
 
 ### Database
 
-默认 SQLite（开发用），生产环境 PostgreSQL。通过 `web/.env` 的 `DATABASE_URL` 配置。
-
-```bash
-# Docker 启动 PostgreSQL
-docker compose up -d db
-```
+**PostgreSQL**（开发和生产均使用）。通过 `web/.env` 的 `DATABASE_URL` 配置。INTEGER 类型为 int32（最大 2,147,483,647），用户 ID 等需要大范围随机数的字段注意不要超出。
 
 ### API Endpoints
 
@@ -302,6 +297,7 @@ docker compose up -d db
 | GET | /api/admin/users | 用户列表分页搜索（admin） |
 | PUT | /api/admin/users/{id}/credits | 调整积分（admin） |
 | PUT | /api/admin/users/{id}/status | 禁用/启用用户（admin） |
+| GET | /api/admin/transactions | 全部积分流水（admin，分页、类型、手机号搜索） |
 | GET | /api/admin/config | 获取积分配置（admin） |
 | PUT | /api/admin/config | 更新积分配置（admin） |
 

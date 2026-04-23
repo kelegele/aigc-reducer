@@ -34,6 +34,9 @@ export default function Settings() {
           <Avatar size={80} src={user?.avatar_url} icon={!user?.avatar_url && <UserOutlined />} />
         </div>
         <Descriptions column={1}>
+          <Descriptions.Item label="用户 ID">
+            <Typography.Text copyable style={{ fontSize: 12 }}>{user?.id}</Typography.Text>
+          </Descriptions.Item>
           <Descriptions.Item label="手机号">{user?.phone}</Descriptions.Item>
           <Descriptions.Item label="昵称">
             {nicknameEditing ? (

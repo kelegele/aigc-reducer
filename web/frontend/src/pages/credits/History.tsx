@@ -21,7 +21,7 @@ export default function History() {
       title: "流水号",
       dataIndex: "trade_no",
       key: "trade_no",
-      render: (v: string) => <Typography.Text copyable code style={{ fontSize: 12 }}>{v}</Typography.Text>,
+      render: (v: string) => <Typography.Text copyable style={{ fontSize: 12 }}>{v}</Typography.Text>,
     },
     {
       title: "时间",

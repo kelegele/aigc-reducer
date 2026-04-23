@@ -56,6 +56,8 @@ export default function AdminUsers() {
     { title: "积分余额", dataIndex: "credit_balance", key: "credit_balance" },
     { title: "累计充值积分", dataIndex: "total_recharged", key: "total_recharged" },
     { title: "累计消费积分", dataIndex: "total_consumed", key: "total_consumed" },
+    { title: "累计充值金额", dataIndex: "total_recharge_cents", key: "total_recharge_cents",
+      render: (v: number) => `¥${(v / 100).toFixed(2)}` },
     {
       title: "状态", dataIndex: "is_active", key: "is_active", width: 80,
       render: (v: boolean) => <Tag color={v ? "green" : "red"}>{v ? "正常" : "禁用"}</Tag>,

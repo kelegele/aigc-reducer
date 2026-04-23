@@ -42,6 +42,7 @@ export interface AdminUserResponse {
   credit_balance: number;
   total_recharged: number;
   total_consumed: number;
+  total_recharge_cents: number;
 }
 
 export interface UserListResponse {
@@ -132,5 +133,40 @@ export async function updateConfig(req: {
   new_user_bonus_credits?: number;
 }): Promise<ConfigResponse> {
   const resp = await client.put<ConfigResponse>("/admin/config", req);
+  return resp.data;
+}
+
+// --- 流水管理 ---
+
+export interface AdminTransactionResponse {
+  id: number;
+  trade_no: string;
+  user_id: number;
+  user_phone: string;
+  user_nickname: string;
+  type: string;
+  amount: number;
+  balance_after: number;
+  ref_type: string | null;
+  ref_id: number | null;
+  remark: string | null;
+  created_at: string;
+}
+
+export interface AdminTransactionListResponse {
+  items: AdminTransactionResponse[];
+  total: number;
+  page: number;
+  size: number;
+}
+
+export async function listAdminTransactions(params?: {
+  user_id?: number;
+  type?: string;
+  search?: string;
+  page?: number;
+  size?: number;
+}): Promise<AdminTransactionListResponse> {
+  const resp = await client.get<AdminTransactionListResponse>("/admin/transactions", { params });
   return resp.data;
 }

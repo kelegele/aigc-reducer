@@ -51,6 +51,7 @@ class AdminUserResponse(BaseModel):
     credit_balance: int
     total_recharged: int
     total_consumed: int
+    total_recharge_cents: int = 0
 
 
 class UserListResponse(BaseModel):
@@ -98,3 +99,27 @@ class ConfigResponse(BaseModel):
 class ConfigUpdateRequest(BaseModel):
     credits_per_token: float | None = None
     new_user_bonus_credits: int | None = None
+
+
+# --- 流水管理 ---
+
+class AdminTransactionResponse(BaseModel):
+    id: int
+    trade_no: str
+    user_id: int
+    user_phone: str
+    user_nickname: str
+    type: str
+    amount: int
+    balance_after: int
+    ref_type: str | None
+    ref_id: int | None
+    remark: str | None
+    created_at: datetime
+
+
+class AdminTransactionListResponse(BaseModel):
+    items: list[AdminTransactionResponse]
+    total: int
+    page: int
+    size: int
