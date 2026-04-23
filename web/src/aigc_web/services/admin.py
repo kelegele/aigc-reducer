@@ -110,6 +110,7 @@ def adjust_credits(db: Session, user_id: int, amount: int, remark: str) -> None:
             balance_after=account.balance,
             ref_type="admin_adjust",
             remark=remark,
+            trade_no=credit_service._generate_trade_no("consume"),
         )
         db.add(tx)
         db.commit()

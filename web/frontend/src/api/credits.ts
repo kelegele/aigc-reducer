@@ -40,6 +40,7 @@ export interface OrderResponse {
 
 export interface TransactionResponse {
   id: number;
+  trade_no: string;
   type: string;
   amount: number;
   balance_after: number;

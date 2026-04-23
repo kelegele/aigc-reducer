@@ -48,6 +48,7 @@ class OrderResponse(BaseModel):
 
 class TransactionResponse(BaseModel):
     id: int
+    trade_no: str
     type: str
     amount: int
     balance_after: int

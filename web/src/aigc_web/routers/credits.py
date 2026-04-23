@@ -130,6 +130,7 @@ def list_transactions(
         items=[
             {
                 "id": tx.id,
+                "trade_no": tx.trade_no,
                 "type": tx.type,
                 "amount": tx.amount,
                 "balance_after": tx.balance_after,

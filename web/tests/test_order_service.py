@@ -90,7 +90,7 @@ def test_get_order_detail_user(db_session):
     detail = payment_service.get_order_detail(db_session, order.id, user_id=user.id)
     assert detail["id"] == order.id
     assert detail["package_name"] == "基础包"
-    assert detail["credit_transaction_id"] is None  # pending 无流水
+    assert detail["credit_transaction_trade_no"] is None  # pending 无流水
 
 
 def test_get_order_detail_with_transaction(db_session):
@@ -101,10 +101,10 @@ def test_get_order_detail_with_transaction(db_session):
     payment_service.handle_payment_callback(db_session, order.id)
 
     detail = payment_service.get_order_detail(db_session, order.id, user_id=user.id)
-    assert detail["credit_transaction_id"] is not None
+    assert detail["credit_transaction_trade_no"] is not None
 
     # 验证对账：流水确实关联到该订单
-    tx = db_session.query(CreditTransaction).filter_by(id=detail["credit_transaction_id"]).one()
+    tx = db_session.query(CreditTransaction).filter_by(trade_no=detail["credit_transaction_trade_no"]).one()
     assert tx.ref_type == "payment_order"
     assert tx.ref_id == order.id
 

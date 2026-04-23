@@ -18,6 +18,12 @@ export default function History() {
 
   const columns: ColumnsType<TransactionResponse> = [
     {
+      title: "流水号",
+      dataIndex: "trade_no",
+      key: "trade_no",
+      render: (v: string) => <Typography.Text copyable code style={{ fontSize: 12 }}>{v}</Typography.Text>,
+    },
+    {
       title: "时间",
       dataIndex: "created_at",
       key: "created_at",

@@ -51,10 +51,18 @@ class AlipayProvider(PaymentProvider):
         if self._alipay is None:
             from alipay import AliPay
 
+            # 自动为裸 base64 密钥添加 PEM 头尾
+            private_key = settings.ALIPAY_PRIVATE_KEY
+            if not private_key.startswith("-----"):
+                private_key = f"-----BEGIN PRIVATE KEY-----\n{private_key}\n-----END PRIVATE KEY-----"
+            public_key = settings.ALIPAY_PUBLIC_KEY
+            if not public_key.startswith("-----"):
+                public_key = f"-----BEGIN PUBLIC KEY-----\n{public_key}\n-----END PUBLIC KEY-----"
+
             self._alipay = AliPay(
                 appid=settings.ALIPAY_APP_ID,
-                app_private_key_string=settings.ALIPAY_PRIVATE_KEY,
-                alipay_public_key_string=settings.ALIPAY_PUBLIC_KEY,
+                app_private_key_string=private_key,
+                alipay_public_key_string=public_key,
                 sign_type="RSA2",
                 debug=settings.alipay_debug,
             )
@@ -290,13 +298,13 @@ def get_order_detail(db: Session, order_id: int, user_id: int | None = None) -> 
         raise ValueError("订单不存在")
 
     # 查关联积分流水（对账）
-    credit_transaction_id = None
+    credit_transaction_trade_no = None
     if order.status == "paid":
         tx = db.query(CreditTransaction).filter_by(
             ref_type="payment_order", ref_id=order.id
         ).first()
         if tx:
-            credit_transaction_id = tx.id
+            credit_transaction_trade_no = tx.trade_no
 
     result = {
         "id": order.id,
@@ -307,7 +315,7 @@ def get_order_detail(db: Session, order_id: int, user_id: int | None = None) -> 
         "pay_method": order.pay_method,
         "created_at": order.created_at,
         "paid_at": order.paid_at,
-        "credit_transaction_id": credit_transaction_id,
+        "credit_transaction_trade_no": credit_transaction_trade_no,
         "package_name": order.package.name if order.package else "",
     }
 
@@ -361,7 +369,7 @@ def list_all_orders(
             "pay_method": o.pay_method,
             "created_at": o.created_at,
             "paid_at": o.paid_at,
-            "credit_transaction_id": tx.id if tx else None,
+            "credit_transaction_trade_no": tx.trade_no if tx else None,
             "package_name": o.package.name if o.package else "",
             "user_id": o.user_id,
             "user_phone": user.phone if user else "",

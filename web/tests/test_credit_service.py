@@ -34,6 +34,7 @@ def test_recharge(db_session):
     assert tx.ref_type == "payment_order"
     assert tx.ref_id == 1
     assert tx.remark == "充值-基础包"
+    assert tx.trade_no.startswith("TX_recharge_")
 
 
 def test_recharge_multiple(db_session):
@@ -49,6 +50,8 @@ def test_recharge_multiple(db_session):
     assert len(txs) == 2
     assert txs[0].balance_after == 50
     assert txs[1].balance_after == 80
+    assert txs[0].trade_no.startswith("TX_recharge_")
+    assert txs[1].trade_no.startswith("TX_recharge_")
 
 
 def test_consume(db_session):
@@ -68,6 +71,8 @@ def test_consume(db_session):
     assert txs[1].balance_after == 70
     assert txs[1].ref_type == "detection_task"
     assert txs[1].ref_id == 10
+    assert txs[0].trade_no.startswith("TX_recharge_")
+    assert txs[1].trade_no.startswith("TX_consume_")
 
 
 def test_consume_insufficient_balance(db_session):

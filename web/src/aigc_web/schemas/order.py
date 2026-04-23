@@ -18,7 +18,7 @@ class OrderListItem(BaseModel):
 
 
 class OrderDetail(OrderListItem):
-    credit_transaction_id: int | None
+    credit_transaction_trade_no: str | None
     package_name: str
 
 

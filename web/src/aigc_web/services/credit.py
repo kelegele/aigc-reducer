@@ -1,11 +1,20 @@
 # web/src/aigc_web/services/credit.py
 """积分服务 -- 充值、消费、流水查询、新人赠送。"""
 
+import uuid
+from datetime import datetime, timezone
+
 from sqlalchemy.orm import Session
 
 from aigc_web.config import settings
 from aigc_web.models.credit_account import CreditAccount
 from aigc_web.models.credit_transaction import CreditTransaction
+
+
+def _generate_trade_no(tx_type: str) -> str:
+    """生成流水号。格式：TX_{type}_{timestamp}_{random}"""
+    ts = datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')
+    return f"TX_{tx_type}_{ts}_{uuid.uuid4().hex[:8]}"
 
 
 def recharge(
@@ -29,6 +38,7 @@ def recharge(
         ref_type=ref_type,
         ref_id=ref_id,
         remark=remark,
+        trade_no=_generate_trade_no("recharge"),
     )
     db.add(tx)
     db.commit()
@@ -60,6 +70,7 @@ def consume(
         ref_type=ref_type,
         ref_id=ref_id,
         remark=remark,
+        trade_no=_generate_trade_no("consume"),
     )
     db.add(tx)
     db.commit()
