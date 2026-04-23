@@ -282,6 +282,7 @@ docker compose up -d db
 | POST | /api/auth/login/phone | 手机号登录（自动注册） |
 | POST | /api/auth/refresh | 刷新 token |
 | GET | /api/auth/me | 当前用户信息 |
+| PUT | /api/auth/me/profile | 修改昵称/头像 |
 | GET | /api/credits/packages | 获取充值套餐列表 |
 | POST | /api/credits/recharge | 创建充值订单 |
 | GET | /api/credits/orders | 用户订单列表（分页、状态筛选） |
