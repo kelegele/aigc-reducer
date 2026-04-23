@@ -221,6 +221,42 @@ op.create_unique_constraint(None, 'table', ['col'])
 
 ## Web Service (from `web/` directory)
 
+### Tech Stack
+
+| 层 | 技术 | 版本 |
+|---|---|---|
+| 语言 | Python | 3.12 |
+| 包管理 | uv | — |
+| Web 框架 | FastAPI | ≥0.110 |
+| ASGI 服务器 | Uvicorn | ≥0.29 |
+| ORM | SQLAlchemy | ≥2.0 |
+| 数据库迁移 | Alembic | ≥1.13 |
+| 数据库 | PostgreSQL | — |
+| 数据库驱动 | psycopg2-binary | ≥2.9 |
+| 数据校验 | Pydantic (pydantic-settings) | ≥2.0 |
+| JWT | python-jose[cryptography] | ≥3.3 |
+| 支付 | python-alipay-sdk | ≥3.4 |
+| 定时任务 | APScheduler | ≥3.11 |
+| HTTP 客户端 | httpx | ≥0.27 |
+| 测试 | pytest | ≥8.0 |
+
+| 层 | 技术 | 版本 |
+|---|---|---|
+| 语言 | TypeScript | 6.0 |
+| 构建 | Vite | 8.x |
+| UI 框架 | React | 19.x |
+| 组件库 | Ant Design | 6.x |
+| 状态管理 | Zustand | 5.x |
+| HTTP 客户端 | Axios | 1.x |
+| 路由 | react-router-dom | 7.x |
+| 图标 | @ant-design/icons | 6.x |
+
+### 开发环境
+
+- **后端端口**: 9000（`web/.env` 的 `BACKEND_PORT`）
+- **前端端口**: 5173（Vite dev server）
+- **前端代理**: `vite.config.ts` 通过 `loadEnv` 读取 `BACKEND_PORT`，代理 `/api` 请求到后端
+
 ```bash
 # 安装依赖
 uv sync
