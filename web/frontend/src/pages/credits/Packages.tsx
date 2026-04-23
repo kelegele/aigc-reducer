@@ -9,10 +9,11 @@ import {
   Typography,
   Tag,
   Alert,
+  Spin,
 } from "antd";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { useCreditsStore } from "../../stores/credits";
-import { createRecharge } from "../../api/credits";
+import { createRecharge, getOrder } from "../../api/credits";
 
 const { Title, Text } = Typography;
 
@@ -29,10 +30,27 @@ export default function Packages() {
   const { message, modal } = AntApp.useApp();
   const [payingOrderId, setPayingOrderId] = useState<number | null>(null);
   const [polling, setPolling] = useState(false);
+  const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
     fetchPackages();
   }, [fetchPackages]);
+
+  useEffect(() => {
+    // 检测支付宝回跳（return_url 带 order_id 参数）
+    const params = new URLSearchParams(window.location.search);
+    const orderId = params.get("order_id");
+    if (orderId) {
+      // 清掉 URL 参数，避免刷新重复触发
+      window.history.replaceState({}, "", "/credits");
+      const id = parseInt(orderId, 10);
+      if (!isNaN(id)) {
+        setPayingOrderId(id);
+        setConfirming(true);
+        startPolling(id);
+      }
+    }
+  }, []);
 
   const handleRecharge = async (pkgId: number, pkgName: string, price: number) => {
     modal.confirm({
@@ -46,7 +64,6 @@ export default function Packages() {
           });
           setPayingOrderId(result.order_id);
           window.location.href = result.pay_url;
-          startPolling(result.order_id);
         } catch (err: unknown) {
           const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
           message.error(detail || "创建订单失败");
@@ -63,14 +80,16 @@ export default function Packages() {
       if (count > 30) {
         clearInterval(interval);
         setPolling(false);
+        setConfirming(false);
+        message.warning("支付结果未确认，请稍后在订单列表中查看");
         return;
       }
       try {
-        const { getOrder } = await import("../../api/credits");
         const order = await getOrder(orderId);
         if (order.status === "paid") {
           clearInterval(interval);
           setPolling(false);
+          setConfirming(false);
           setPayingOrderId(null);
           message.success("充值成功！");
           fetchBalance();
@@ -84,6 +103,18 @@ export default function Packages() {
   return (
     <div>
       <Title level={5}>选择充值套餐</Title>
+
+      {/* 支付结果确认中 */}
+      {confirming && (
+        <Alert
+          type="info"
+          showIcon
+          icon={<Spin size="small" />}
+          message="支付结果确认中..."
+          description="正在查询支付结果，请稍候"
+          style={{ marginBottom: 16 }}
+        />
+      )}
 
       {/* 积分用途说明 */}
       <Alert
