@@ -7,13 +7,16 @@ from aigc_reducer_core.parser import Paragraph
 
 
 class ConnectorDetector:
+    def __init__(self):
+        data_path = importlib.resources.files("aigc_reducer_core") / "data" / "ai_connectors.yaml"
+        with open(str(data_path), "r", encoding="utf-8") as f:
+            self._data = yaml.safe_load(f)
+
     def analyze(self, paragraph: Paragraph) -> float:
         text = paragraph.text
         text_lower = text.lower()
 
-        data_path = importlib.resources.files("aigc_reducer_core") / "data" / "ai_connectors.yaml"
-        with open(str(data_path), "r", encoding="utf-8") as f:
-            data = yaml.safe_load(f)
+        data = self._data
 
         matches = 0
         for connector in data.get("connectors", {}).get("high_frequency", []):

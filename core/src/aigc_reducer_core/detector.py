@@ -3,6 +3,7 @@
 import threading
 from typing import Dict, List, Literal
 
+from aigc_reducer_core import CancelledError
 from aigc_reducer_core.parser import Paragraph
 from aigc_reducer_core.detectors import (
     PerplexityDetector,
@@ -21,11 +22,6 @@ RISK_LEVELS = [
     (60, "中高"),
     (100, "高风险"),
 ]
-
-
-class CancelledError(Exception):
-    """用户取消操作时抛出的异常。"""
-    pass
 
 
 class AIGCDetector:

@@ -56,6 +56,11 @@ class LLMClient:
         self._api_key = api_key
         self._base_url = base_url
 
+    @property
+    def model(self) -> str:
+        """当前使用的模型标识。"""
+        return self._model
+
     @classmethod
     def from_env(cls) -> "LLMClient":
         """从环境变量创建客户端。

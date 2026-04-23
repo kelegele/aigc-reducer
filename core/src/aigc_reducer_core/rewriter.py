@@ -3,6 +3,7 @@
 import threading
 from typing import Dict, List
 
+from aigc_reducer_core import CancelledError
 from aigc_reducer_core.parser import Paragraph
 from aigc_reducer_core.styles import (
     ColloquialStyle,
@@ -22,11 +23,6 @@ STYLE_MAP = {
     "学术人文化": AcademicHumanisticStyle,
     "粗犷草稿风": RoughDraftStyle,
 }
-
-
-class CancelledError(Exception):
-    """用户取消操作时抛出的异常。"""
-    pass
 
 
 def list_styles() -> List[str]:
