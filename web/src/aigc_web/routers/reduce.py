@@ -190,12 +190,12 @@ def finalize_task(
     current_user: User = Depends(require_current_user),
 ):
     service = ReduceService(db)
+    # 确保任务属于当前用户
+    service.get_task(task_id, current_user.id)
     try:
         task = service.finalize_task(task_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    # 确保任务属于当前用户
-    service.get_task(task_id, current_user.id)
     return _task_to_response(task)
 
 

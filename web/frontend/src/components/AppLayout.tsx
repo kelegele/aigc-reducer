@@ -22,6 +22,7 @@ import {
   ControlOutlined,
   FileTextOutlined,
   BulbOutlined,
+  EditOutlined,
 } from "@ant-design/icons";
 import { useAuthStore } from "../stores/auth";
 import { useThemeStore } from "../stores/theme";
@@ -30,6 +31,7 @@ const { Header, Content } = Layout;
 const { Text } = Typography;
 
 const getMenuItems = (isAdmin: boolean) => [
+  { key: "/reduce/new", icon: <EditOutlined />, label: "降重" },
   { key: "/dashboard", icon: <DashboardOutlined />, label: "仪表盘" },
   { key: "/credits", icon: <CreditCardOutlined />, label: "积分" },
   { key: "/history", icon: <HistoryOutlined />, label: "历史" },

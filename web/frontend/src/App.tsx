@@ -8,6 +8,8 @@ import Dashboard from "./pages/Dashboard";
 import Credits from "./pages/Credits";
 import History from "./pages/History";
 import Settings from "./pages/Settings";
+import NewTask from "./pages/reduce/NewTask";
+import TaskWorkspace from "./pages/reduce/TaskWorkspace";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminPackages from "./pages/admin/AdminPackages";
 import AdminOrders from "./pages/admin/AdminOrders";
@@ -81,6 +83,8 @@ export default function App() {
             <Route path="/credits" element={<Credits />} />
             <Route path="/history" element={<History />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/reduce/new" element={<NewTask />} />
+            <Route path="/reduce/:taskId" element={<TaskWorkspace />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/packages" element={<AdminPackages />} />
             <Route path="/admin/orders" element={<AdminOrders />} />
