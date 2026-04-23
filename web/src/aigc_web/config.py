@@ -1,5 +1,7 @@
 """应用配置 — 从环境变量 / .env 文件读取。"""
 
+from pathlib import Path
+
 from pydantic_settings import BaseSettings
 
 
@@ -39,7 +41,10 @@ class Settings(BaseSettings):
     DEV_TEST_PHONES: str = ""
     DEV_BYPASS_PHONE: bool = False
 
-    model_config = {"env_file": ".env", "extra": "ignore"}
+    # 超管手机号；登录时自动提升 is_admin
+    ADMIN_PHONE: str = ""
+
+    model_config = {"env_file": str(Path(__file__).resolve().parents[2] / ".env"), "extra": "ignore"}
 
 
 settings = Settings()

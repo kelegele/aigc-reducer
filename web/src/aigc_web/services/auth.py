@@ -3,11 +3,21 @@
 
 from sqlalchemy.orm import Session
 
+from aigc_web.config import settings
 from aigc_web.models.credit_account import CreditAccount
 from aigc_web.models.user import User
 from aigc_web.schemas.auth import LoginResponse, UserResponse
 from aigc_web.services import credit as credit_service
 from aigc_web.services.token import create_access_token, create_refresh_token, decode_token
+
+
+def _sync_admin_flag(db: Session, user: User, phone: str) -> None:
+    """根据 ADMIN_PHONE 环境变量同步用户超管标识。"""
+    should_be_admin = phone == settings.ADMIN_PHONE if settings.ADMIN_PHONE else False
+    if user.is_admin != should_be_admin:
+        user.is_admin = should_be_admin
+        db.commit()
+        db.refresh(user)
 
 
 def login_or_register(db: Session, phone: str) -> LoginResponse:
@@ -33,6 +43,9 @@ def login_or_register(db: Session, phone: str) -> LoginResponse:
     # 获取积分余额
     account = db.query(CreditAccount).filter(CreditAccount.user_id == user.id).first()
     balance = account.balance if account else 0
+
+    # ADMIN_PHONE 自动提升超管
+    _sync_admin_flag(db, user, phone)
 
     access_token = create_access_token(user.id)
     refresh_token = create_refresh_token(user.id)
