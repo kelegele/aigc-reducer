@@ -1,6 +1,6 @@
 // web/frontend/src/pages/credits/Orders.tsx
 import { useEffect, useState } from "react";
-import { Table, Tag, Typography, Select, Space, message } from "antd";
+import { App as AntApp, Table, Tag, Typography, Select, Space } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { getOrders, getOrderDetail } from "../../api/orders";
 import type {
@@ -17,6 +17,7 @@ const statusMap: Record<string, { color: string; label: string }> = {
 };
 
 export default function Orders() {
+  const { message } = AntApp.useApp();
   const [orders, setOrders] = useState<OrderListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);

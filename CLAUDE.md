@@ -144,6 +144,35 @@ try {
 - `.then().catch(() => {})` — 静默失败（统计数据等非关键数据）
 - try-catch + message.error — 关键操作失败必须提示用户
 
+### Toast/Modal 主题适配
+
+所有 `message.xxx()` 和 `Modal.confirm()` **必须**使用 `App.useApp()` hook 获取实例，禁止直接使用 antd 静态方法。静态方法不继承 `ConfigProvider` 的主题上下文，导致深浅色切换时 Toast/弹窗样式不跟随。
+
+```typescript
+// 正确
+import { App as AntApp } from "antd";
+const { message, modal } = AntApp.useApp();
+
+// 错误 — 不会跟随主题
+import { message, Modal } from "antd";
+```
+
+**前提**：`App.tsx` 已用 `<AntApp>` 包裹路由，所有子组件均可使用此 hook。
+
+### 设计规范
+
+- `DESIGN.md` 为全站设计规范，所有页面（包括 Landing、Login、Dashboard、Admin）必须遵守其中的配色、字体、间距体系
+- 所有页面必须同时适配深色和浅色模式，禁止硬编码颜色值（如 `#00d992`、`#f50`）
+- 使用 `theme.useToken()` 获取主题 token（`token.colorPrimary`、`token.colorSuccess`、`token.colorError` 等）
+
+### 首页 SEO/GEO 规范
+
+Landing 页面（`/`）是面向搜索引擎和 AI 概览的公开页面，必须遵守 SEO 和 GEO 最佳实践：
+- 语义化 HTML（h1/h2/h3 层级、section 划分）
+- 完整的 meta 信息（title、description、keywords）
+- 结构化内容（产品服务描述准确、简洁）
+- 页脚信息真实、专业（联系方式、版权声明）
+
 ## Backend Coding Rules
 
 ### 关联保护逻辑要区分状态

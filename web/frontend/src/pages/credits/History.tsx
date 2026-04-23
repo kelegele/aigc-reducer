@@ -1,6 +1,6 @@
 // web/frontend/src/pages/credits/History.tsx
 import { useEffect, useState } from "react";
-import { Table, Tag, Select, Typography } from "antd";
+import { Table, Tag, Select, Typography, theme } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCreditsStore } from "../../stores/credits";
 import type { TransactionResponse } from "../../api/credits";
@@ -9,6 +9,7 @@ const { Title } = Typography;
 
 export default function History() {
   const { transactions, fetchTransactions, loading } = useCreditsStore();
+  const { token } = theme.useToken();
   const [typeFilter, setTypeFilter] = useState<string | undefined>(undefined);
 
   useEffect(() => {
@@ -37,7 +38,7 @@ export default function History() {
       dataIndex: "amount",
       key: "amount",
       render: (v: number) => (
-        <span style={{ color: v > 0 ? "#52c41a" : "#ff4d4f" }}>
+        <span style={{ color: v > 0 ? token.colorSuccess : token.colorError }}>
           {v > 0 ? "+" : ""}
           {v}
         </span>

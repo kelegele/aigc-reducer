@@ -1,9 +1,10 @@
 // web/frontend/src/pages/Login.tsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, Card, Form, Input, message, Typography } from "antd";
-import { MobileOutlined, SafetyOutlined } from "@ant-design/icons";
+import { App as AntApp, Button, Card, Form, Input, Typography, theme } from "antd";
+import { MobileOutlined, SafetyOutlined, BulbOutlined, LeftOutlined } from "@ant-design/icons";
 import { useAuthStore } from "../stores/auth";
+import { useThemeStore } from "../stores/theme";
 
 const { Title, Text } = Typography;
 
@@ -13,6 +14,9 @@ export default function Login() {
   const [countdown, setCountdown] = useState(0);
   const { login, sendSms, loading } = useAuthStore();
   const navigate = useNavigate();
+  const { token } = theme.useToken();
+  const { isDark, toggle } = useThemeStore();
+  const { message } = AntApp.useApp();
 
   const handleSendCode = async () => {
     try {
@@ -48,8 +52,16 @@ export default function Login() {
       message.success("登录成功");
       navigate("/dashboard");
     } catch (err: unknown) {
-      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      message.error(detail || "登录失败，请检查验证码");
+      const resp = (err as { response?: { data?: { detail?: string | Array<{ msg: string }> } } })?.response?.data;
+      if (resp?.detail) {
+        if (typeof resp.detail === "string") {
+          message.error(resp.detail);
+        } else if (Array.isArray(resp.detail)) {
+          message.error(resp.detail.map((e: { msg: string }) => e.msg).join("; "));
+        }
+      } else {
+        message.error("登录失败，请检查验证码");
+      }
     }
   };
 
@@ -60,12 +72,35 @@ export default function Login() {
         justifyContent: "center",
         alignItems: "center",
         minHeight: "100vh",
-        background: "#f0f2f5",
+        background: token.colorBgLayout,
+        position: "relative",
       }}
     >
+      <Button
+        type="text"
+        icon={<LeftOutlined />}
+        onClick={() => navigate("/")}
+        style={{
+          position: "absolute",
+          top: 16,
+          left: 16,
+          color: token.colorTextSecondary,
+        }}
+      />
+      <Button
+        type="text"
+        icon={<BulbOutlined />}
+        onClick={toggle}
+        style={{
+          position: "absolute",
+          top: 16,
+          right: 16,
+          color: token.colorTextSecondary,
+        }}
+      />
       <Card style={{ width: 400, maxWidth: "90vw" }}>
         <Title level={3} style={{ textAlign: "center", marginBottom: 32 }}>
-          AIGC Reducer
+          AIGC<span style={{ color: token.colorPrimary }}>Reducer</span>
         </Title>
         <Form form={form} onFinish={handleLogin} size="large">
           <Form.Item

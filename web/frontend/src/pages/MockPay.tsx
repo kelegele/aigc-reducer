@@ -1,7 +1,7 @@
 // web/frontend/src/pages/MockPay.tsx
 import { useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Button, Card, Result, Spin, Typography, message } from "antd";
+import { App as AntApp, Button, Card, Result, Typography, theme } from "antd";
 import client from "../api/client";
 
 const { Title, Text } = Typography;
@@ -9,6 +9,8 @@ const { Title, Text } = Typography;
 export default function MockPay() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { token } = theme.useToken();
+  const { message } = AntApp.useApp();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -41,7 +43,7 @@ export default function MockPay() {
           justifyContent: "center",
           alignItems: "center",
           minHeight: "100vh",
-          background: "#f0f2f5",
+          background: token.colorBgLayout,
         }}
       >
         <Result
@@ -71,7 +73,7 @@ export default function MockPay() {
         justifyContent: "center",
         alignItems: "center",
         minHeight: "100vh",
-        background: "#f0f2f5",
+        background: token.colorBgLayout,
       }}
     >
       <Card style={{ width: 420, maxWidth: "90vw", textAlign: "center" }}>
@@ -86,7 +88,7 @@ export default function MockPay() {
           </p>
           <p>
             <Text strong>支付金额：</Text>
-            <Text style={{ fontSize: 24, fontWeight: "bold", color: "#f50" }}>
+            <Text style={{ fontSize: 24, fontWeight: "bold", color: token.colorError }}>
               ¥{(parseInt(amount, 10) / 100).toFixed(2)}
             </Text>
           </p>

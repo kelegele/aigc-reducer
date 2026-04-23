@@ -4,7 +4,12 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    <title>AIGC Reducer</title>
+    <script>
+      // 防止主题闪白：在 React 加载前同步设置背景色
+      var t = localStorage.getItem('theme');
+      document.documentElement.style.backgroundColor = t !== 'light' ? '#050507' : '#f5f5f5';
+    </script>
   </head>
   <body>
     <div id="root"></div>

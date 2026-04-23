@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Button, Card, Form, InputNumber, message, Typography } from "antd";
+import { App as AntApp, Button, Card, Form, InputNumber, Typography } from "antd";
 import { getConfig, updateConfig } from "../../api/admin";
 
 const { Title } = Typography;
 
 export default function AdminConfig() {
+  const { message } = AntApp.useApp();
   const [saving, setSaving] = useState(false);
   const [form] = Form.useForm();
 

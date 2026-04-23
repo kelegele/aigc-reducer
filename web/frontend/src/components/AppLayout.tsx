@@ -5,6 +5,7 @@ import {
   Layout,
   Menu,
   Avatar,
+  Button,
   Dropdown,
   Typography,
   theme,
@@ -20,8 +21,10 @@ import {
   ShoppingOutlined,
   ControlOutlined,
   FileTextOutlined,
+  BulbOutlined,
 } from "@ant-design/icons";
 import { useAuthStore } from "../stores/auth";
+import { useThemeStore } from "../stores/theme";
 
 const { Header, Content } = Layout;
 const { Text } = Typography;
@@ -54,6 +57,7 @@ export default function AppLayout() {
   const location = useLocation();
   const { user, logout, fetchUser } = useAuthStore();
   const { token: themeToken } = theme.useToken();
+  const { isDark, toggle } = useThemeStore();
 
   useEffect(() => {
     if (!user) {
@@ -63,7 +67,7 @@ export default function AppLayout() {
 
   const handleLogout = () => {
     logout();
-    navigate("/login");
+    navigate("/");
   };
 
   const userMenu = {
@@ -91,7 +95,7 @@ export default function AppLayout() {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
           <Text strong style={{ fontSize: 18, whiteSpace: "nowrap" }}>
-            AIGC Reducer
+            AIGC<span style={{ color: themeToken.colorPrimary }}>Reducer</span>
           </Text>
           <Menu
             mode="horizontal"
@@ -101,14 +105,23 @@ export default function AppLayout() {
             style={{ border: "none", flex: 1 }}
           />
         </div>
-        <Dropdown menu={userMenu} placement="bottomRight">
-          <div style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
-            <Avatar icon={<UserOutlined />} />
-            <Text style={{ display: "none" }} className="show-on-mobile">
-              {user?.nickname}
-            </Text>
-          </div>
-        </Dropdown>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Button
+            type="text"
+            size="small"
+            icon={<BulbOutlined />}
+            onClick={toggle}
+            style={{ color: themeToken.colorTextSecondary }}
+          />
+          <Dropdown menu={userMenu} placement="bottomRight">
+            <div style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
+              <Avatar icon={<UserOutlined />} />
+              <Text style={{ display: "none" }} className="show-on-mobile">
+                {user?.nickname}
+              </Text>
+            </div>
+          </Dropdown>
+        </div>
       </Header>
       <Content style={{ padding: "24px", maxWidth: 1200, margin: "0 auto", width: "100%" }}>
         <Outlet />

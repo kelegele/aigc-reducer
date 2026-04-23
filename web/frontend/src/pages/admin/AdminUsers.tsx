@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { Button, Input, InputNumber, Modal, Table, Tag, Typography, message } from "antd";
+import { App as AntApp, Button, Input, InputNumber, Modal, Table, Tag, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { listUsers, adjustCredits, setUserStatus, type AdminUserResponse } from "../../api/admin";
 
 const { Title } = Typography;
 
 export default function AdminUsers() {
+  const { message, modal } = AntApp.useApp();
   const [users, setUsers] = useState<{ items: AdminUserResponse[]; total: number; page: number; size: number } | null>(null);
   const [search, setSearch] = useState("");
   const [adjustModal, setAdjustModal] = useState<{ userId: number; visible: boolean }>({ userId: 0, visible: false });
@@ -33,7 +34,7 @@ export default function AdminUsers() {
   };
 
   const handleToggleStatus = async (userId: number, isActive: boolean) => {
-    Modal.confirm({
+    modal.confirm({
       title: `确认${isActive ? "禁用" : "启用"}该用户？`,
       onOk: async () => {
         try {

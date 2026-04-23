@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Form, Input, InputNumber, Modal, Switch, Table, Typography, message } from "antd";
+import { App as AntApp, Button, Form, Input, InputNumber, Switch, Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
   listAllPackages,
@@ -12,6 +12,7 @@ import {
 const { Title } = Typography;
 
 export default function AdminPackages() {
+  const { message, modal } = AntApp.useApp();
   const [packages, setPackages] = useState<AdminPackageResponse[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editPkg, setEditPkg] = useState<AdminPackageResponse | null>(null);
@@ -43,7 +44,7 @@ export default function AdminPackages() {
   };
 
   const handleDelete = async (id: number) => {
-    Modal.confirm({
+    modal.confirm({
       title: "确认删除？",
       onOk: async () => {
         try {

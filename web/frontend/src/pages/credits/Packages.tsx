@@ -1,15 +1,14 @@
 // web/frontend/src/pages/credits/Packages.tsx
 import { useEffect, useState } from "react";
 import {
+  App as AntApp,
   Card,
   Row,
   Col,
   Button,
   Typography,
   Tag,
-  Modal,
   Alert,
-  message,
 } from "antd";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { useCreditsStore } from "../../stores/credits";
@@ -27,6 +26,7 @@ const packageScenes: Record<string, string> = {
 
 export default function Packages() {
   const { packages, fetchPackages, fetchBalance } = useCreditsStore();
+  const { message, modal } = AntApp.useApp();
   const [payingOrderId, setPayingOrderId] = useState<number | null>(null);
   const [polling, setPolling] = useState(false);
 
@@ -35,7 +35,7 @@ export default function Packages() {
   }, [fetchPackages]);
 
   const handleRecharge = async (pkgId: number, pkgName: string, price: number) => {
-    Modal.confirm({
+    modal.confirm({
       title: "确认充值",
       content: `套餐：${pkgName}，金额：¥${(price / 100).toFixed(2)}`,
       onOk: async () => {

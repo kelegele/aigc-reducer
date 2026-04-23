@@ -1,13 +1,13 @@
 // web/frontend/src/pages/admin/AdminOrders.tsx
 import { useEffect, useState } from "react";
 import {
+  App as AntApp,
   Table,
   Tag,
   Input,
   Select,
   Space,
   Typography,
-  message,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { getAdminOrders } from "../../api/orders";
@@ -23,6 +23,7 @@ const statusMap: Record<string, { color: string; label: string }> = {
 };
 
 export default function AdminOrders() {
+  const { message } = AntApp.useApp();
   const [orders, setOrders] = useState<AdminOrderDetail[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
