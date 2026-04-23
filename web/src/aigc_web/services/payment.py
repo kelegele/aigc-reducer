@@ -3,7 +3,7 @@
 
 import uuid
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
@@ -75,6 +75,7 @@ class AlipayProvider(PaymentProvider):
                 subject=subject,
                 return_url=return_url,
                 notify_url=notify_url,
+                timeout_express=f"{settings.ORDER_TIMEOUT_MINUTES}m",
             )
         else:
             order_string = alipay.api_alipay_trade_page_pay(
@@ -83,6 +84,7 @@ class AlipayProvider(PaymentProvider):
                 subject=subject,
                 return_url=return_url,
                 notify_url=notify_url,
+                timeout_express=f"{settings.ORDER_TIMEOUT_MINUTES}m",
             )
         gateway = (
             "https://openapi-sandbox.go.alipaydev.com/gateway.do?"
@@ -340,3 +342,20 @@ def list_all_orders(
         })
 
     return {"items": items, "total": total, "page": page, "size": size}
+
+
+def close_expired_orders(db: Session) -> int:
+    """关闭超时的 pending 订单。返回关闭数量。"""
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=settings.ORDER_TIMEOUT_MINUTES)
+    expired = (
+        db.query(PaymentOrder)
+        .filter(
+            PaymentOrder.status == "pending",
+            PaymentOrder.created_at < cutoff,
+        )
+        .all()
+    )
+    for order in expired:
+        order.status = "closed"
+    db.commit()
+    return len(expired)

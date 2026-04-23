@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     ALIPAY_RETURN_URL: str = ""
     ALIPAY_DEBUG: bool = True
 
+    # 订单超时
+    ORDER_TIMEOUT_MINUTES: int = 15  # pending 订单超时时间（分钟）
+
     # 开发环境测试账号
     DEV_TEST_PHONES: str = ""
     DEV_BYPASS_PHONE: bool = False
