@@ -36,6 +36,10 @@ class PaymentProvider(ABC):
     def verify_callback(self, params: dict) -> bool:
         """验证回调签名。"""
 
+    @abstractmethod
+    def query_trade(self, out_trade_no: str) -> dict | None:
+        """查询交易状态。返回 {"status": "paid", "trade_no": ..., "paid_amount": ...} 或 None。"""
+
 
 class AlipayProvider(PaymentProvider):
     """支付宝支付实现。基于 python-alipay-sdk。"""
@@ -97,6 +101,18 @@ class AlipayProvider(PaymentProvider):
         alipay = self._get_alipay()
         return alipay.verify(params, params.get("sign"))
 
+    def query_trade(self, out_trade_no: str) -> dict | None:
+        alipay = self._get_alipay()
+        resp = alipay.api_alipay_trade_query(out_trade_no=out_trade_no)
+        trade_status = resp.get("trade_status")
+        if trade_status in ("TRADE_SUCCESS", "TRADE_FINISHED"):
+            return {
+                "status": "paid",
+                "trade_no": resp.get("trade_no"),
+                "paid_amount": resp.get("total_amount"),
+            }
+        return None
+
 
 class MockPaymentProvider(PaymentProvider):
     """开发环境模拟支付渠道。"""
@@ -114,6 +130,9 @@ class MockPaymentProvider(PaymentProvider):
 
     def verify_callback(self, params: dict) -> bool:
         return params.get("mock_sign") == "ok"
+
+    def query_trade(self, out_trade_no: str) -> dict | None:
+        return None
 
 
 _payment_provider: PaymentProvider | None = None

@@ -165,3 +165,71 @@ def test_query_order_status_wrong_user(db_session):
 
     with pytest.raises(ValueError, match="订单不存在"):
         payment_service.query_order_status(db_session, order.id, other_user.id)
+
+
+def test_mock_provider_query_trade_returns_none():
+    from aigc_web.services.payment import MockPaymentProvider
+    provider = MockPaymentProvider()
+    assert provider.query_trade("any_order") is None
+
+
+@patch("aigc_web.services.payment.settings")
+def test_alipay_provider_query_trade_paid(mock_settings):
+    mock_settings.ALIPAY_APP_ID = "test-id"
+    mock_settings.ALIPAY_PRIVATE_KEY = "key"
+    mock_settings.ALIPAY_PUBLIC_KEY = "pub"
+    mock_settings.ALIPAY_DEBUG = True
+
+    from aigc_web.services.payment import AlipayProvider
+    provider = AlipayProvider()
+    provider._alipay = MagicMock()
+    provider._alipay.api_alipay_trade_query.return_value = {
+        "trade_status": "TRADE_SUCCESS",
+        "trade_no": "ALIPAY_TRADE_123",
+        "total_amount": "10.00",
+    }
+
+    result = provider.query_trade("PAY_TEST_001")
+    assert result is not None
+    assert result["status"] == "paid"
+    assert result["trade_no"] == "ALIPAY_TRADE_123"
+
+
+@patch("aigc_web.services.payment.settings")
+def test_alipay_provider_query_trade_not_paid(mock_settings):
+    mock_settings.ALIPAY_APP_ID = "test-id"
+    mock_settings.ALIPAY_PRIVATE_KEY = "key"
+    mock_settings.ALIPAY_PUBLIC_KEY = "pub"
+    mock_settings.ALIPAY_DEBUG = True
+
+    from aigc_web.services.payment import AlipayProvider
+    provider = AlipayProvider()
+    provider._alipay = MagicMock()
+    provider._alipay.api_alipay_trade_query.return_value = {
+        "trade_status": "WAIT_BUYER_PAY",
+    }
+
+    result = provider.query_trade("PAY_TEST_002")
+    assert result is None
+
+
+@patch("aigc_web.services.payment.settings")
+def test_alipay_provider_query_trade_finished(mock_settings):
+    """TRADE_FINISHED 也视为已支付。"""
+    mock_settings.ALIPAY_APP_ID = "test-id"
+    mock_settings.ALIPAY_PRIVATE_KEY = "key"
+    mock_settings.ALIPAY_PUBLIC_KEY = "pub"
+    mock_settings.ALIPAY_DEBUG = True
+
+    from aigc_web.services.payment import AlipayProvider
+    provider = AlipayProvider()
+    provider._alipay = MagicMock()
+    provider._alipay.api_alipay_trade_query.return_value = {
+        "trade_status": "TRADE_FINISHED",
+        "trade_no": "ALIPAY_TRADE_456",
+        "total_amount": "20.00",
+    }
+
+    result = provider.query_trade("PAY_TEST_003")
+    assert result is not None
+    assert result["status"] == "paid"
