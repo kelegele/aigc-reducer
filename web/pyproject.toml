@@ -16,6 +16,7 @@ dependencies = [
     "python-alipay-sdk>=3.4",
     "python-multipart>=0.0.26",
     "apscheduler>=3.11.2",
+    "aigc-reducer-core",
 ]
 
 [project.optional-dependencies]
@@ -34,3 +35,6 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+
+[tool.uv.sources]
+aigc-reducer-core = { path = "../core" }

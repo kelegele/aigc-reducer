@@ -13,6 +13,7 @@ from aigc_web.database import SessionLocal
 from aigc_web.routers import admin as admin_router
 from aigc_web.routers import auth as auth_router
 from aigc_web.routers import credits as credits_router
+from aigc_web.routers import reduce as reduce_router
 from aigc_web.services import payment as payment_service
 
 logger = logging.getLogger(__name__)
@@ -54,6 +55,7 @@ app.add_middleware(
 app.include_router(auth_router.router)
 app.include_router(credits_router.router)
 app.include_router(admin_router.router)
+app.include_router(reduce_router.reduce_router)
 
 
 @app.get("/api/health")

@@ -32,6 +32,11 @@ class Settings(BaseSettings):
     NEW_USER_BONUS_CREDITS: int = 0
     CREDITS_PER_TOKEN: float = 1.0  # 每 1000 Token 消耗积分数
 
+    # LLM 配置（P3 检测/改写）
+    LLM_MODEL: str = ""
+    LLM_API_KEY: str = ""
+    LLM_BASE_URL: str | None = None
+
     # 支付宝配置
     ALIPAY_APP_ID: str = ""
     ALIPAY_PRIVATE_KEY: str = ""
