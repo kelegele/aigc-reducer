@@ -27,7 +27,7 @@ export default function History() {
       title: "时间",
       dataIndex: "created_at",
       key: "created_at",
-      render: (v: string) => new Date(v).toLocaleString("zh-CN"),
+      render: (v: string) => new Date(v + "Z").toLocaleString("zh-CN"),
     },
     {
       title: "类型",

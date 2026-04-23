@@ -26,7 +26,7 @@ const packageScenes: Record<string, string> = {
 };
 
 export default function Packages() {
-  const { packages, fetchPackages, fetchBalance } = useCreditsStore();
+  const { packages, fetchPackages, fetchBalance, fetchTransactions } = useCreditsStore();
   const { message, modal } = AntApp.useApp();
   const [payingOrderId, setPayingOrderId] = useState<number | null>(null);
   const [polling, setPolling] = useState(false);
@@ -37,11 +37,10 @@ export default function Packages() {
   }, [fetchPackages]);
 
   useEffect(() => {
-    // 检测支付宝回跳（return_url 带 order_id 参数）
+    // 支付宝回跳自动检测（return_url 带 order_id 参数）
     const params = new URLSearchParams(window.location.search);
     const orderId = params.get("order_id");
     if (orderId) {
-      // 清掉 URL 参数，避免刷新重复触发
       window.history.replaceState({}, "", "/credits");
       const id = parseInt(orderId, 10);
       if (!isNaN(id)) {
@@ -63,7 +62,18 @@ export default function Packages() {
             pay_method: "pc_web",
           });
           setPayingOrderId(result.order_id);
-          window.location.href = result.pay_url;
+          // 新 tab 打开支付页面
+          window.open(result.pay_url, "_blank");
+          // 弹窗确认是否已完成支付
+          modal.confirm({
+            title: "支付确认",
+            content: "请在新打开的页面完成支付，完成后点击下方按钮确认",
+            okText: "已充值",
+            cancelText: "未完成",
+            onOk: () => {
+              startPolling(result.order_id);
+            },
+          });
         } catch (err: unknown) {
           const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
           message.error(detail || "创建订单失败");
@@ -74,6 +84,7 @@ export default function Packages() {
 
   const startPolling = (orderId: number) => {
     setPolling(true);
+    setConfirming(true);
     let count = 0;
     const interval = setInterval(async () => {
       count++;
@@ -93,6 +104,7 @@ export default function Packages() {
           setPayingOrderId(null);
           message.success("充值成功！");
           fetchBalance();
+          fetchTransactions({ page: 1, size: 5 });
         }
       } catch {
         // 继续轮询

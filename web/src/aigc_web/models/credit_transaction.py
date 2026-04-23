@@ -13,7 +13,7 @@ class CreditTransaction(Base):
     __tablename__ = "credit_transactions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    trade_no: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
+    trade_no: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
     type: Mapped[str] = mapped_column(String(20), nullable=False)
     amount: Mapped[int] = mapped_column(Integer, nullable=False)

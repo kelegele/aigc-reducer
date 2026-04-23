@@ -131,7 +131,7 @@ export default function AdminOrders() {
       title: "创建时间",
       dataIndex: "created_at",
       key: "created_at",
-      render: (v: string) => new Date(v).toLocaleString("zh-CN"),
+      render: (v: string) => new Date(v + "Z").toLocaleString("zh-CN"),
     },
   ];
 

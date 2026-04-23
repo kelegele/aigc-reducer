@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { App as AntApp, Button, Form, Input, InputNumber, Switch, Table, Typography } from "antd";
+import { App as AntApp, Button, Form, Input, InputNumber, Modal, Switch, Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
   listAllPackages,

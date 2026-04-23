@@ -65,6 +65,21 @@ def get_order(
         ) from e
 
 
+@router.post("/orders/{order_id}/repay")
+def repay_order(
+    order_id: int,
+    user: User = Depends(require_current_user),
+    db: Session = Depends(get_db),
+):
+    """待支付订单重新获取支付链接。"""
+    try:
+        return payment_service.repay_order(db, order_id, user.id)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        ) from e
+
+
 @router.get("/orders", response_model=OrderListResponse)
 def list_orders(
     status: str | None = None,

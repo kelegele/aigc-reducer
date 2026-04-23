@@ -15,7 +15,7 @@ export interface OrderListItem {
 }
 
 export interface OrderDetail extends OrderListItem {
-  credit_transaction_id: number | null;
+  credit_transaction_trade_no: string | null;
   package_name: string;
 }
 
@@ -58,6 +58,15 @@ export async function getOrderDetail(
   const resp = await client.get<OrderDetail>(
     `/credits/orders/${orderId}/detail`
   );
+  return resp.data;
+}
+
+export interface RepayResponse {
+  pay_url: string;
+}
+
+export async function repayOrder(orderId: number): Promise<RepayResponse> {
+  const resp = await client.post<RepayResponse>(`/credits/orders/${orderId}/repay`);
   return resp.data;
 }
 

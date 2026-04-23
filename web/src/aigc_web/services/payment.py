@@ -216,7 +216,7 @@ def handle_payment_callback(db: Session, order_id: int) -> None:
 
     order.status = "paid"
     order.paid_at = datetime.now(timezone.utc)
-    db.commit()
+    db.flush()  # flush 到事务内，不单独提交；recharge() 的 db.commit() 会一并提交
 
     credit_service.recharge(
         db,
@@ -252,6 +252,26 @@ def query_order_status(db: Session, order_id: int, user_id: int) -> dict:
         "created_at": order.created_at,
         "paid_at": order.paid_at,
     }
+
+
+def repay_order(db: Session, order_id: int, user_id: int) -> dict:
+    """待支付订单重新获取支付链接。"""
+    order = db.query(PaymentOrder).filter_by(id=order_id, user_id=user_id).first()
+    if order is None:
+        raise ValueError("订单不存在")
+    if order.status != "pending":
+        raise ValueError("只有待支付订单可以继续支付")
+
+    provider = get_payment_provider()
+    pay_url = provider.create_order(
+        out_trade_no=order.out_trade_no,
+        amount=order.amount_cents,
+        subject=f"积分充值-{order.package.name if order.package else ''}",
+        return_url=settings.get_return_url(order.id),
+        notify_url=settings.get_notify_url(),
+        pay_method=order.pay_method,
+    )
+    return {"pay_url": pay_url}
 
 
 def list_user_orders(

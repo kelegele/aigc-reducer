@@ -33,12 +33,12 @@ export default function Balance({ onGoPackages }: BalanceProps) {
         </Col>
         <Col xs={24} sm={8}>
           <Card>
-            <Statistic title="累计充值" value={balance?.total_recharged ?? 0} />
+            <Statistic title="累计充值积分" value={balance?.total_recharged ?? 0} />
           </Card>
         </Col>
         <Col xs={24} sm={8}>
           <Card>
-            <Statistic title="累计消费" value={balance?.total_consumed ?? 0} />
+            <Statistic title="累计消费积分" value={balance?.total_consumed ?? 0} />
           </Card>
         </Col>
       </Row>
@@ -60,7 +60,7 @@ export default function Balance({ onGoPackages }: BalanceProps) {
               <List.Item>
                 <List.Item.Meta
                   title={item.remark || (item.type === "recharge" ? "充值" : "消费")}
-                  description={item.created_at}
+                  description={new Date(item.created_at + "Z").toLocaleString("zh-CN")}
                 />
                 <Text type={item.amount > 0 ? "success" : "danger"}>
                   {item.amount > 0 ? "+" : ""}

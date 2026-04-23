@@ -1,8 +1,8 @@
 // web/frontend/src/pages/credits/Orders.tsx
 import { useEffect, useState } from "react";
-import { App as AntApp, Table, Tag, Typography, Select, Space } from "antd";
+import { App as AntApp, Button, Table, Tag, Typography, Select, Space } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { getOrders, getOrderDetail } from "../../api/orders";
+import { getOrders, getOrderDetail, repayOrder } from "../../api/orders";
 import type {
   OrderListItem,
   OrderDetail,
@@ -55,6 +55,16 @@ export default function Orders() {
     }
   };
 
+  const handleRepay = async (orderId: number) => {
+    try {
+      const result = await repayOrder(orderId);
+      window.location.href = result.pay_url;
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      message.error(detail || "获取支付链接失败");
+    }
+  };
+
   const columns: ColumnsType<OrderListItem> = [
     {
       title: "订单号",
@@ -85,14 +95,25 @@ export default function Orders() {
       title: "创建时间",
       dataIndex: "created_at",
       key: "created_at",
-      render: (v: string) => new Date(v).toLocaleString("zh-CN"),
+      render: (v: string) => new Date(v + "Z").toLocaleString("zh-CN"),
     },
     {
       title: "支付时间",
       dataIndex: "paid_at",
       key: "paid_at",
       render: (v: string | null) =>
-        v ? new Date(v).toLocaleString("zh-CN") : "-",
+        v ? new Date(v + "Z").toLocaleString("zh-CN") : "-",
+    },
+    {
+      title: "操作",
+      key: "action",
+      width: 100,
+      render: (_: unknown, record: OrderListItem) =>
+        record.status === "pending" ? (
+          <Button type="link" size="small" onClick={() => handleRepay(record.id)}>
+            继续支付
+          </Button>
+        ) : null,
     },
   ];
 
@@ -138,10 +159,10 @@ export default function Orders() {
                 <Text>
                   套餐名称：{detail.package_name}
                 </Text>
-                {detail.credit_transaction_id !== null && (
+                {detail.credit_transaction_trade_no && (
                   <Text>
-                    积分流水 ID：
-                    <Text code>{detail.credit_transaction_id}</Text>
+                    积分流流水号：
+                    <Text code>{detail.credit_transaction_trade_no}</Text>
                   </Text>
                 )}
               </Space>
