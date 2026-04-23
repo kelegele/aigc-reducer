@@ -210,7 +210,7 @@ def create_recharge_order(
 
 def handle_payment_callback(db: Session, order_id: int) -> None:
     """处理支付成功回调。幂等：已 paid 的订单不重复加积分。"""
-    order = db.query(PaymentOrder).filter_by(id=order_id).one()
+    order = db.query(PaymentOrder).filter_by(id=order_id).with_for_update().one()
     if order.status == "paid":
         return  # 幂等保护
 

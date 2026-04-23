@@ -1,38 +1,59 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: aigc-reducer-postgres
+    container_name: aigc-reducer-db
+    restart: unless-stopped
     environment:
       POSTGRES_USER: aigc
       POSTGRES_PASSWORD: ${DB_PASSWORD:-aigc123}
       POSTGRES_DB: aigc_reducer
     volumes:
       - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U aigc -d aigc_reducer"]
       interval: 5s
-      timeout: 5s
+      timeout: 3s
       retries: 5
 
-  api:
-    build:
-      context: ./web
-      dockerfile: Dockerfile
+  backend:
+    build: ./web
+    container_name: aigc-reducer-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
     environment:
       DATABASE_URL: postgresql://aigc:${DB_PASSWORD:-aigc123}@db:5432/aigc_reducer
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-production}
       JWT_ALGORITHM: HS256
+      JWT_ACCESS_TOKEN_EXPIRE_MINUTES: 30
+      JWT_REFRESH_TOKEN_EXPIRE_DAYS: 7
       SMS_PROVIDER: ${SMS_PROVIDER:-dev}
-      CORS_ORIGINS: '["https://your-domain.com"]'
-    ports:
-      - "8000:8000"
-    depends_on:
-      db:
-        condition: service_healthy
+      SMS_ACCESS_KEY: ${SMS_ACCESS_KEY:-}
+      SMS_ACCESS_SECRET: ${SMS_ACCESS_SECRET:-}
+      SMS_SIGN_NAME: ${SMS_SIGN_NAME:-}
+      SMS_TEMPLATE_CODE: ${SMS_TEMPLATE_CODE:-}
+      CORS_ORIGINS: '["https://${DOMAIN:-localhost}"]'
+      SITE_URL: https://${DOMAIN:-localhost}
+      NEW_USER_BONUS_CREDITS: ${NEW_USER_BONUS_CREDITS:-0}
+      CREDITS_PER_TOKEN: ${CREDITS_PER_TOKEN:-1.0}
+      ALIPAY_APP_ID: ${ALIPAY_APP_ID:-}
+      ALIPAY_PRIVATE_KEY: ${ALIPAY_PRIVATE_KEY:-}
+      ALIPAY_PUBLIC_KEY: ${ALIPAY_PUBLIC_KEY:-}
+      ORDER_TIMEOUT_MINUTES: ${ORDER_TIMEOUT_MINUTES:-15}
+      ADMIN_PHONE: ${ADMIN_PHONE:-}
     command: >
-      sh -c "alembic upgrade head && uvicorn aigc_web.main:app --host 0.0.0.0 --port 8000"
+      sh -c "uv run alembic upgrade head &&
+             uv run uvicorn aigc_web.main:app --host 0.0.0.0 --port 9000 --workers 4"
+
+  frontend:
+    build: ./web/frontend
+    container_name: aigc-reducer-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
 
 volumes:
   pgdata:
