@@ -25,7 +25,7 @@ export default function Balance({ onGoPackages }: BalanceProps) {
         <Col xs={24} sm={8}>
           <Card>
             <Statistic
-              title="当前积分"
+              title={<span>当前积分 <Button type="link" size="small" onClick={onGoPackages}>充值</Button></span>}
               value={balance?.balance ?? 0}
               prefix={<CreditCardOutlined />}
             />

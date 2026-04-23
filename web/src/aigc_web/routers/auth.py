@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from aigc_web.database import get_db
-from aigc_web.dependencies import get_verification_service, require_current_user_response
+from aigc_web.dependencies import get_verification_service, require_current_user, require_current_user_response
 from aigc_web.schemas.auth import (
     LoginResponse,
     MessageResponse,
@@ -13,6 +13,7 @@ from aigc_web.schemas.auth import (
     RefreshRequest,
     SendSmsRequest,
     TokenResponse,
+    UpdateProfileRequest,
     UserResponse,
 )
 from aigc_web.services import auth as auth_service
@@ -61,3 +62,18 @@ def refresh_token(req: RefreshRequest, db: Session = Depends(get_db)):
 @router.get("/me", response_model=UserResponse)
 async def get_me(user: UserResponse = Depends(require_current_user_response)):
     return user
+
+
+@router.put("/me/profile", response_model=UserResponse)
+def update_profile(
+    req: UpdateProfileRequest,
+    user=Depends(require_current_user),
+    db: Session = Depends(get_db),
+):
+    if req.nickname is not None:
+        user.nickname = req.nickname
+    if req.avatar_url is not None:
+        user.avatar_url = req.avatar_url
+    db.commit()
+    db.refresh(user)
+    return auth_service.get_user_response(db, user)

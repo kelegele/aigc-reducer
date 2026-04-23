@@ -40,5 +40,10 @@ class LoginResponse(BaseModel):
     user: UserResponse
 
 
+class UpdateProfileRequest(BaseModel):
+    nickname: str | None = Field(default=None, min_length=1, max_length=20, description="昵称")
+    avatar_url: str | None = Field(default=None, max_length=500, description="头像 URL")
+
+
 class MessageResponse(BaseModel):
     message: str

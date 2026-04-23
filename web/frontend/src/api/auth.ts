@@ -43,3 +43,11 @@ export async function getMe(): Promise<UserResponse> {
   const resp = await client.get<UserResponse>("/auth/me");
   return resp.data;
 }
+
+export async function updateProfile(data: {
+  nickname?: string;
+  avatar_url?: string;
+}): Promise<UserResponse> {
+  const resp = await client.put<UserResponse>("/auth/me/profile", data);
+  return resp.data;
+}
