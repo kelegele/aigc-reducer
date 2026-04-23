@@ -221,10 +221,18 @@ def handle_payment_callback(db: Session, order_id: int) -> None:
 
 
 def query_order_status(db: Session, order_id: int, user_id: int) -> dict:
-    """查询订单状态，校验归属当前用户。"""
+    """查询订单状态。pending 订单会主动查询支付渠道核实支付结果。"""
     order = db.query(PaymentOrder).filter_by(id=order_id, user_id=user_id).first()
     if order is None:
         raise ValueError("订单不存在")
+
+    # pending 订单主动查询支付渠道
+    if order.status == "pending":
+        provider = get_payment_provider()
+        result = provider.query_trade(order.out_trade_no)
+        if result:
+            handle_payment_callback(db, order.id)
+            db.refresh(order)
 
     return {
         "id": order.id,

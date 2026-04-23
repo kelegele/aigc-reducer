@@ -233,3 +233,65 @@ def test_alipay_provider_query_trade_finished(mock_settings):
     result = provider.query_trade("PAY_TEST_003")
     assert result is not None
     assert result["status"] == "paid"
+
+
+@patch("aigc_web.services.payment.get_payment_provider")
+def test_query_order_status_active_query_confirms_payment(mock_get_provider, db_session):
+    """pending 订单查询时，后端主动调 query_trade，发现已支付则更新。"""
+    user, pkg = _setup_user_and_package(db_session)
+    order = PaymentOrder(
+        user_id=user.id,
+        package_id=pkg.id,
+        out_trade_no="PAY_ACTIVE_001",
+        amount_cents=1000,
+        credits_granted=110,
+        status="pending",
+        pay_method="pc_web",
+    )
+    db_session.add(order)
+    db_session.commit()
+
+    mock_provider = MagicMock()
+    mock_provider.query_trade.return_value = {
+        "status": "paid",
+        "trade_no": "ALIPAY_123",
+        "paid_amount": "10.00",
+    }
+    mock_get_provider.return_value = mock_provider
+
+    result = payment_service.query_order_status(db_session, order.id, user.id)
+    assert result["status"] == "paid"
+    assert result["paid_at"] is not None
+
+    # 积分到账
+    account = db_session.query(CreditAccount).filter_by(user_id=user.id).one()
+    assert account.balance == 110
+
+    # 幂等：再查一次不重复加积分
+    result2 = payment_service.query_order_status(db_session, order.id, user.id)
+    assert result2["status"] == "paid"
+    assert db_session.query(CreditAccount).filter_by(user_id=user.id).one().balance == 110
+
+
+@patch("aigc_web.services.payment.get_payment_provider")
+def test_query_order_status_active_query_still_pending(mock_get_provider, db_session):
+    """query_trade 返回 None（未支付），订单保持 pending。"""
+    user, pkg = _setup_user_and_package(db_session)
+    order = PaymentOrder(
+        user_id=user.id,
+        package_id=pkg.id,
+        out_trade_no="PAY_ACTIVE_002",
+        amount_cents=1000,
+        credits_granted=110,
+        status="pending",
+        pay_method="pc_web",
+    )
+    db_session.add(order)
+    db_session.commit()
+
+    mock_provider = MagicMock()
+    mock_provider.query_trade.return_value = None
+    mock_get_provider.return_value = mock_provider
+
+    result = payment_service.query_order_status(db_session, order.id, user.id)
+    assert result["status"] == "pending"
