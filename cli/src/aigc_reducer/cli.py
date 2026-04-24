@@ -17,6 +17,7 @@ from aigc_reducer.report import (
     print_scan_report,
     print_revision_progress,
     print_final_report,
+    RISK_LABEL,
 )
 
 console = Console()
@@ -247,7 +248,7 @@ def _save_revision_report(
         for i, (bp, ap, br, ar) in enumerate(zip(before_paras, after_paras, before_results, after_results)):
             if bp.text != ap.text:
                 f.write(f"## 段落 {i}\n\n")
-                f.write(f"**检测分数**: {br['risk_level']} {br['composite_score']}% → {ar['risk_level']} {ar['composite_score']}%\n\n")
+                f.write(f"**检测分数**: {RISK_LABEL.get(br['risk_level'], br['risk_level'])} {br['composite_score']}% → {RISK_LABEL.get(ar['risk_level'], ar['risk_level'])} {ar['composite_score']}%\n\n")
                 f.write(f"**检测特征**:\n")
                 for feat in br.get('ai_features', []):
                     f.write(f"- {feat}\n")
@@ -304,9 +305,9 @@ def _save_diff(
         for i, (bp, ap, br, ar) in enumerate(zip(before_paras, after_paras, before_results, after_results)):
             if bp.text != ap.text:
                 f.write(f"## 段落 {i}\n\n")
-                f.write(f"**修改前** ({br['risk_level']} {br['composite_score']}%):\n\n")
+                f.write(f"**修改前** ({RISK_LABEL.get(br['risk_level'], br['risk_level'])} {br['composite_score']}%):\n\n")
                 f.write(f"{bp.text}\n\n")
-                f.write(f"**修改后** ({ar['risk_level']} {ar['composite_score']}%):\n\n")
+                f.write(f"**修改后** ({RISK_LABEL.get(ar['risk_level'], ar['risk_level'])} {ar['composite_score']}%):\n\n")
                 f.write(f"{ap.text}\n\n")
                 f.write("---\n\n")
 

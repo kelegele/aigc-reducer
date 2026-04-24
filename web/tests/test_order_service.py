@@ -106,7 +106,7 @@ def test_get_order_detail_with_transaction(db_session):
     # 验证对账：流水确实关联到该订单
     tx = db_session.query(CreditTransaction).filter_by(trade_no=detail["credit_transaction_trade_no"]).one()
     assert tx.ref_type == "payment_order"
-    assert tx.ref_id == order.id
+    assert tx.ref_id == str(order.id)
 
 
 def test_get_order_detail_admin_mode(db_session):

@@ -45,26 +45,36 @@ class ReduceService:
         # 1. 获取原文并解析段落
         if text:
             original_text = text
-            paragraphs = [
-                Paragraph(text=t.strip(), index=i)
-                for i, t in enumerate(text.split("\n\n"))
-                if t.strip()
-            ]
+            paragraphs = []
+            for i, block in enumerate(text.split("\n\n")):
+                block = block.strip()
+                if not block:
+                    continue
+                # 识别 markdown 标题
+                if block.startswith("#"):
+                    heading_text = block.lstrip("#").strip()
+                    if heading_text:
+                        paragraphs.append(Paragraph(text=heading_text, index=i, is_heading=True))
+                    continue
+                paragraphs.append(Paragraph(text=block, index=i))
         elif file_path:
             paragraphs = await asyncio.to_thread(
                 _parse_document_sync, file_path
             )
-            with open(file_path, "r", encoding="utf-8") as f:
-                original_text = f.read()
+            original_text = "\n\n".join(p.text for p in paragraphs)
         else:
             raise ValueError("必须提供 text 或 file_path")
 
         # 2. 创建任务记录
-        title = (
-            original_text[:50].replace("\n", " ") + "..."
-            if len(original_text) > 50
-            else original_text
-        )
+        first_heading = next((p.text for p in paragraphs if p.is_heading), None)
+        if first_heading:
+            title = first_heading[:100]
+        else:
+            title = (
+                original_text[:50].replace("\n", " ") + "..."
+                if len(original_text) > 50
+                else original_text
+            )
         task = ReductionTask(
             user_id=user_id,
             title=title,
@@ -95,12 +105,22 @@ class ReduceService:
 
     # ── 检测（SSE） ──
 
-    async def start_detection(self, task_id: int) -> AsyncGenerator[dict, None]:
-        """启动检测，SSE 生成器。"""
+    async def start_detection(self, task_id: str) -> AsyncGenerator[dict, None]:
+        """启动检测，SSE 生成器。detecting 状态视为上次中断，重置后重新检测。"""
         task = self._get_task(task_id)
-        if task.status != "detecting":
+        if task.status not in ("detecting", "detected"):
             yield {"type": "error", "message": f"任务状态不正确: {task.status}"}
             return
+
+        # detecting 状态 = 上次中断，重置段落检测结果
+        if task.status == "detecting":
+            paragraphs = self._get_paragraphs(task_id)
+            for p in paragraphs:
+                p.detection_result = None
+                p.risk_level = None
+                p.needs_processing = False
+                p.status = "pending"
+            self.db.flush()
 
         paragraphs = self._get_paragraphs(task_id)
         parsed = [
@@ -154,7 +174,7 @@ class ReduceService:
             para = paragraphs[i]
             para.detection_result = result
             para.risk_level = result.get("risk_level")
-            para.needs_processing = result.get("risk_level") != "低风险"
+            para.needs_processing = result.get("risk_level") != "low"
             para.status = "detected"
             if para.needs_processing:
                 needs_processing_count += 1
@@ -194,7 +214,7 @@ class ReduceService:
 
     # ── 全量语义重构（SSE） ──
 
-    async def start_reconstruction(self, task_id: int) -> AsyncGenerator[dict, None]:
+    async def start_reconstruction(self, task_id: str) -> AsyncGenerator[dict, None]:
         """全量语义重构（可选步骤）。"""
         task = self._get_task(task_id)
         if task.status != "detected":
@@ -263,7 +283,7 @@ class ReduceService:
 
     # ── 改写（SSE） ──
 
-    async def start_rewrite(self, task_id: int) -> AsyncGenerator[dict, None]:
+    async def start_rewrite(self, task_id: str) -> AsyncGenerator[dict, None]:
         """启动改写，SSE 生成器。对 needs_processing 的段落生成 A/B 选项。"""
         task = self._get_task(task_id)
         if task.status not in ("detected", "rewriting"):
@@ -365,7 +385,7 @@ class ReduceService:
 
     def confirm_paragraph(
         self,
-        task_id: int,
+        task_id: str,
         index: int,
         choice: str,
         manual_text: str | None = None,
@@ -397,7 +417,7 @@ class ReduceService:
 
     # ── 任务完成 ──
 
-    def finalize_task(self, task_id: int) -> ReductionTask:
+    def finalize_task(self, task_id: str) -> ReductionTask:
         """所有段落确认后生成最终文档。"""
         task = self._get_task(task_id)
         paragraphs = self._get_paragraphs(task_id)
@@ -424,7 +444,7 @@ class ReduceService:
 
     # ── 查询 ──
 
-    def get_task(self, task_id: int, user_id: int) -> ReductionTask:
+    def get_task(self, task_id: str, user_id: int) -> ReductionTask:
         """获取用户的任务。"""
         task = (
             self.db.query(ReductionTask)
@@ -448,7 +468,7 @@ class ReduceService:
         tasks = query.offset((page - 1) * page_size).limit(page_size).all()
         return tasks, total
 
-    def estimate_credits(self, task_id: int, operation: str) -> dict:
+    def estimate_credits(self, task_id: str, operation: str) -> dict:
         """预估积分消耗。"""
         task = self._get_task(task_id)
         paragraphs = self._get_paragraphs(task_id)
@@ -481,13 +501,13 @@ class ReduceService:
 
     # ── 私有方法 ──
 
-    def _get_task(self, task_id: int) -> ReductionTask:
+    def _get_task(self, task_id: str) -> ReductionTask:
         task = self.db.query(ReductionTask).filter_by(id=task_id).first()
         if not task:
             raise ValueError("任务不存在")
         return task
 
-    def _get_paragraphs(self, task_id: int) -> list[ReductionParagraph]:
+    def _get_paragraphs(self, task_id: str) -> list[ReductionParagraph]:
         return (
             self.db.query(ReductionParagraph)
             .filter_by(task_id=task_id)

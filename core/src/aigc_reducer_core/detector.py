@@ -17,10 +17,10 @@ from aigc_reducer_core.llm_client import LLMClient
 
 
 RISK_LEVELS = [
-    (10, "低风险"),
-    (30, "中风险"),
-    (60, "中高"),
-    (100, "高风险"),
+    (10, "low"),
+    (30, "medium"),
+    (60, "medium_high"),
+    (100, "high"),
 ]
 
 
@@ -113,4 +113,4 @@ class AIGCDetector:
         for threshold, level in RISK_LEVELS:
             if score < threshold:
                 return level
-        return "高风险"
+        return "high"

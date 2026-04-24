@@ -35,7 +35,7 @@ class ParagraphResponse(BaseModel):
 
 
 class TaskResponse(BaseModel):
-    id: int
+    id: str
     title: str
     status: str
     detect_mode: str
@@ -53,7 +53,7 @@ class TaskResponse(BaseModel):
 
 
 class TaskListItem(BaseModel):
-    id: int
+    id: str
     title: str
     status: str
     style: str

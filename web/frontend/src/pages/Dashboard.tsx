@@ -10,6 +10,7 @@ import {
   SearchOutlined,
   ThunderboltOutlined,
   RightOutlined,
+  PlusCircleOutlined,
 } from "@ant-design/icons";
 import { useAuthStore } from "../stores/auth";
 
@@ -22,12 +23,23 @@ export default function Dashboard() {
 
   return (
     <div>
-      <Title level={4} style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}>
-        欢迎，{user?.nickname}
-      </Title>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Title level={4} style={{ fontFamily: "system-ui, -apple-system, sans-serif", margin: 0 }}>
+          欢迎，{user?.nickname}
+        </Title>
+        <Button
+          type="primary"
+          size="large"
+          icon={<PlusCircleOutlined />}
+          onClick={() => navigate("/reduce/new")}
+          style={{ height: 44, paddingInline: 28, fontSize: 15, fontWeight: 600 }}
+        >
+          开始检测降重
+        </Button>
+      </div>
 
       {/* 统计卡片 */}
-      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+      <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
         <Col xs={12} sm={6}>
           <Card style={{ borderTop: `2px solid ${token.colorPrimary}` }}>
             <Statistic
@@ -79,11 +91,29 @@ export default function Dashboard() {
         <Steps
           size="small"
           current={-1}
+          style={{ cursor: "pointer" }}
+          onClick={() => navigate("/reduce/new")}
           items={[
-            { title: "上传文档", icon: <FileTextOutlined /> },
-            { title: "扫描风险", icon: <SearchOutlined /> },
-            { title: "AI 改写", icon: <ThunderboltOutlined /> },
-            { title: "下载结果", icon: <DownloadOutlined /> },
+            {
+              title: "上传文档",
+              icon: <FileTextOutlined style={{ color: token.colorPrimary }} />,
+              style: { color: token.colorPrimary },
+            },
+            {
+              title: "扫描风险",
+              icon: <SearchOutlined style={{ color: token.colorPrimary }} />,
+              style: { color: token.colorPrimary },
+            },
+            {
+              title: "AI 改写",
+              icon: <ThunderboltOutlined style={{ color: token.colorPrimary }} />,
+              style: { color: token.colorPrimary },
+            },
+            {
+              title: "下载结果",
+              icon: <DownloadOutlined style={{ color: token.colorPrimary }} />,
+              style: { color: token.colorPrimary },
+            },
           ]}
         />
       </Card>

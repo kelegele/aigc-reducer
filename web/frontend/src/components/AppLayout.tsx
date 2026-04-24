@@ -31,8 +31,8 @@ const { Header, Content } = Layout;
 const { Text } = Typography;
 
 const getMenuItems = (isAdmin: boolean) => [
-  { key: "/reduce/new", icon: <EditOutlined />, label: "降重" },
   { key: "/dashboard", icon: <DashboardOutlined />, label: "仪表盘" },
+  { key: "/reduce/new", icon: <EditOutlined />, label: "检测降重" },
   { key: "/credits", icon: <CreditCardOutlined />, label: "积分" },
   { key: "/history", icon: <HistoryOutlined />, label: "历史" },
   { key: "/settings", icon: <SettingOutlined />, label: "设置" },

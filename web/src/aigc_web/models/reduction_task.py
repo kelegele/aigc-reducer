@@ -1,6 +1,7 @@
 # web/src/aigc_web/models/reduction_task.py
 """改写任务 ORM 模型。"""
 
+import uuid
 from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, func
@@ -12,7 +13,7 @@ from aigc_web.database import Base
 class ReductionTask(Base):
     __tablename__ = "reduction_tasks"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: uuid.uuid4().hex)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="parsing")

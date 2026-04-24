@@ -102,8 +102,8 @@ def test_detection_rules_mode(client):
     task = _create_detecting_task(user_id, detect_mode="rules")
 
     mock_results = [
-        {"composite_score": 45, "risk_level": "中风险"},
-        {"composite_score": 8, "risk_level": "低风险"},
+        {"composite_score": 45, "risk_level": "medium"},
+        {"composite_score": 8, "risk_level": "low"},
     ]
 
     with (
@@ -125,13 +125,13 @@ def test_detection_rules_mode(client):
     # 验证事件序列：2个 paragraph_done + 1个 complete
     assert events[0]["type"] == "paragraph_done"
     assert events[0]["index"] == 0
-    assert events[0]["risk_level"] == "中风险"
+    assert events[0]["risk_level"] == "medium"
     assert events[0]["current"] == 1
     assert events[0]["total"] == 2
 
     assert events[1]["type"] == "paragraph_done"
     assert events[1]["index"] == 1
-    assert events[1]["risk_level"] == "低风险"
+    assert events[1]["risk_level"] == "low"
     assert events[1]["current"] == 2
 
     assert events[2]["type"] == "complete"
@@ -144,10 +144,10 @@ def test_detection_rules_mode(client):
     assert task.status == "detected"
 
     paras = db.query(ReductionParagraph).filter_by(task_id=task.id).order_by(ReductionParagraph.index).all()
-    assert paras[0].risk_level == "中风险"
+    assert paras[0].risk_level == "medium"
     assert paras[0].needs_processing is True
     assert paras[0].status == "detected"
-    assert paras[1].risk_level == "低风险"
+    assert paras[1].risk_level == "low"
     assert paras[1].needs_processing is False
     assert paras[1].status == "detected"
 
@@ -239,9 +239,9 @@ def test_rewrite(client):
     task.status = "detected"
     paras = db.query(ReductionParagraph).filter_by(task_id=task.id).order_by(ReductionParagraph.index).all()
     paras[0].needs_processing = True
-    paras[0].detection_result = {"composite_score": 45, "risk_level": "中风险"}
+    paras[0].detection_result = {"composite_score": 45, "risk_level": "medium"}
     paras[1].needs_processing = True
-    paras[1].detection_result = {"composite_score": 55, "risk_level": "中高"}
+    paras[1].detection_result = {"composite_score": 55, "risk_level": "medium_high"}
     db.commit()
 
     # 充值足够积分

@@ -106,11 +106,11 @@ class TestAIGCDetector:
             index=0,
         )
         result = self.detector.analyze(high_risk)
-        assert result["risk_level"] in ["高风险", "中高"]
+        assert result["risk_level"] in ["high", "medium_high"]
 
         low_risk = Paragraph(
             text="方法倒是管用，不过边缘场景还得再调调——这问题之前没注意到。",
             index=0,
         )
         result = self.detector.analyze(low_risk)
-        assert result["risk_level"] == "低风险"
+        assert result["risk_level"] == "low"

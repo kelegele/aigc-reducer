@@ -59,7 +59,7 @@ class LLMDetector:
                 "cognitive_score": 15,
                 "semantic_score": 15,
                 "composite_score": 14,
-                "risk_level": "中风险",
+                "risk_level": "medium",
                 "ai_features": ["文本过短，无法准确判断"],
                 "_llm_raw": None,
             }
@@ -128,10 +128,10 @@ class LLMDetector:
 
     def _classify(self, score: float) -> str:
         if score < 10:
-            return "低风险"
+            return "low"
         elif score < 30:
-            return "中风险"
+            return "medium"
         elif score < 60:
-            return "中高"
+            return "medium_high"
         else:
-            return "高风险"
+            return "high"

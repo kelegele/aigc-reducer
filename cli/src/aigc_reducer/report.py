@@ -7,10 +7,17 @@ from rich.panel import Panel
 console = Console()
 
 RISK_EMOJI = {
-    "低风险": "🟢",
-    "中风险": "🟡",
-    "中高": "🟠",
-    "高风险": "🔴",
+    "low": "🟢",
+    "medium": "🟡",
+    "medium_high": "🟠",
+    "high": "🔴",
+}
+
+RISK_LABEL = {
+    "low": "低风险",
+    "medium": "中风险",
+    "medium_high": "中高",
+    "high": "高风险",
 }
 
 
@@ -22,7 +29,7 @@ def print_scan_report(
     """输出首次扫描风险评估报告。"""
     high_risk_count = sum(
         1 for r in detection_results
-        if r["risk_level"] in ("高风险", "中高")
+        if r["risk_level"] in ("high", "medium_high")
     )
     estimated_rate = round(high_risk_count / max(len(detection_results), 1) * 100)
 
@@ -43,7 +50,7 @@ def print_scan_report(
         console.print(f"  风险: {emoji} {score}% | 评价: {_generate_evaluation(result)}")
         console.print()
 
-        if result["risk_level"] in ("高风险", "中高"):
+        if result["risk_level"] in ("high", "medium_high"):
             needs_processing.append(i)
 
     console.print(f"需处理段落: {', '.join(f'段落{n}' for n in needs_processing)} (共{len(needs_processing)}段)")
@@ -97,7 +104,7 @@ def print_final_report(
     console.print("\n修改汇总：")
 
     for i, (before, after) in enumerate(zip(before_results, after_results)):
-        if before["risk_level"] in ("高风险", "中高", "中风险"):
+        if before["risk_level"] in ("high", "medium_high", "medium"):
             before_emoji = RISK_EMOJI.get(before["risk_level"], "⚪")
             after_emoji = RISK_EMOJI.get(after["risk_level"], "⚪")
             console.print(
@@ -115,7 +122,7 @@ def _calc_rate(results: List[Dict]) -> float:
         return 0
     high_risk = sum(
         1 for r in results
-        if r["risk_level"] in ("高风险", "中高")
+        if r["risk_level"] in ("high", "medium_high")
     )
     return round(high_risk / len(results) * 100)
 

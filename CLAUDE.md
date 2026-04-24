@@ -136,6 +136,48 @@ core/aigc-reducer-core  (共享引擎，同步 Python)
 
 **规则生成机制**：排查到的一切编码问题（bug、遗漏、不一致、UX 缺陷），修复后都必须提炼为一条通用规范追加到下方对应章节。不仅是修复当前代码，更要防止同类问题再发生。
 
+### 枚举常量禁止硬编码字符串
+
+所有有限状态集合（风险等级、任务状态等）**必须**定义常量映射，禁止在代码中散落硬编码字符串。数据层（core / 后端 / 数据库）统一用英文标识符（如 `low` / `medium` / `high`），展示层（CLI / 前端）映射为中文。测试断言也必须用英文标识符，不得断言中文。
+
+**示例**：
+```python
+# core — 定义并使用英文 key
+RISK_LEVELS = [(10, "low"), (30, "medium"), (60, "medium_high"), (100, "high")]
+
+# CLI/Web 展示层映射
+RISK_LABEL = {"low": "低风险", "medium": "中风险", "medium_high": "中高", "high": "高风险"}
+```
+
+```typescript
+// 前端展示层映射
+const RISK_LABELS: Record<string, string> = { low: "低风险", medium: "中风险", ... };
+```
+
+**原因**：core detector 曾经返回中文 risk_level（"低风险"/"中风险"），前端 RISK_LABELS 的 key 是英文（low/medium），导致前端显示"未知"。数据库、API、逻辑判断全用英文，中文只存在于用户可见的展示层。
+
+### 端口配置必须走环境变量
+
+前后端端口**必须**从 `web/.env` 的环境变量读取，禁止硬编码。启动开发服务器时也必须用环境变量中的端口。
+
+- 后端：`BACKEND_PORT`（默认 8000），`uv run uvicorn aigc_web.main:app --port $BACKEND_PORT`
+- 前端：`FRONTEND_PORT`（默认 5173），Vite 通过 `loadEnv` 读取
+- Vite 代理：target 从 `BACKEND_PORT` 读取
+
+**原因**：多次因端口不一致导致 502 Bad Gateway（前端跑在 5174 但浏览器缓存的 5173，后端端口从 8000 改为 9898 但 Vite 代理还在指 8000）。所有端口统一从 `.env` 读取，一处修改全局生效。
+
+### core 包修改后必须重装到 web venv
+
+修改 `core/` 代码后，web 的 venv **不会**自动更新。必须显式执行：
+
+```bash
+cd web && uv sync --reinstall-package aigc-reducer-core
+```
+
+然后重启后端进程。
+
+**原因**：`core/` 通过 `pyproject.toml` 的 `[tool.uv.sources]` 链接到 `web/.venv`，但 uv 不会在每次 `uv sync` 时自动重建已安装的 editable 包。多次出现 core 代码已改但 web venv 里还是旧版的问题。
+
 ## Frontend Coding Rules
 
 ### 错误处理规范

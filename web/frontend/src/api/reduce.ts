@@ -20,7 +20,7 @@ export interface ParagraphResponse {
 }
 
 export interface TaskResponse {
-  id: number;
+  id: string;
   title: string;
   status: string;
   detect_mode: string;
@@ -36,7 +36,7 @@ export interface TaskResponse {
 }
 
 export interface TaskListItem {
-  id: number;
+  id: string;
   title: string;
   status: string;
   style: string;
@@ -106,14 +106,14 @@ export async function getTasks(
 }
 
 /** 任务详情 */
-export async function getTask(taskId: number): Promise<TaskResponse> {
+export async function getTask(taskId: string): Promise<TaskResponse> {
   const resp = await client.get<TaskResponse>(`/reduce/tasks/${taskId}`);
   return resp.data;
 }
 
 /** 预估积分 */
 export async function estimateCredits(
-  taskId: number,
+  taskId: string,
   operation: string,
 ): Promise<CreditsEstimateResponse> {
   const resp = await client.post<CreditsEstimateResponse>(
@@ -126,7 +126,7 @@ export async function estimateCredits(
 
 /** 确认段落 */
 export async function confirmParagraph(
-  taskId: number,
+  taskId: string,
   index: number,
   choice: string,
   manualText?: string,

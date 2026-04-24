@@ -22,7 +22,7 @@ def recharge(
     user_id: int,
     amount: int,
     ref_type: str | None = None,
-    ref_id: int | None = None,
+    ref_id: str | int | None = None,
     remark: str | None = None,
 ) -> None:
     """充值积分。事务内更新余额 + 写流水。"""
@@ -49,7 +49,7 @@ def consume(
     user_id: int,
     token_count: int,
     ref_type: str | None = None,
-    ref_id: int | None = None,
+    ref_id: str | int | None = None,
     remark: str | None = None,
 ) -> int:
     """消费积分。按 token_count / 1000 * CREDITS_PER_TOKEN 扣减。返回消耗积分数。"""

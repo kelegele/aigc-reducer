@@ -19,7 +19,7 @@ class CreditTransaction(Base):
     amount: Mapped[int] = mapped_column(Integer, nullable=False)
     balance_after: Mapped[int] = mapped_column(Integer, nullable=False)
     ref_type: Mapped[str | None] = mapped_column(String(30), nullable=True)
-    ref_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    ref_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     remark: Mapped[str | None] = mapped_column(String(200), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), nullable=False)
 

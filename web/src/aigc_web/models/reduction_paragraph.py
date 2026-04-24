@@ -11,8 +11,8 @@ class ReductionParagraph(Base):
     __tablename__ = "reduction_paragraphs"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    task_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("reduction_tasks.id", ondelete="CASCADE"), nullable=False
+    task_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("reduction_tasks.id", ondelete="CASCADE"), nullable=False
     )
     index: Mapped[int] = mapped_column(Integer, nullable=False)
     original_text: Mapped[str] = mapped_column(Text, nullable=False)

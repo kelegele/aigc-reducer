@@ -11,9 +11,11 @@ class TestMarkdownParser:
 
         paragraphs = parse_document(str(md_file))
 
-        assert len(paragraphs) == 2
-        assert paragraphs[0].text == "这是第一段。"
-        assert paragraphs[1].text == "这是第二段。"
+        assert len(paragraphs) == 3
+        assert paragraphs[0].text == "标题"
+        assert paragraphs[0].is_heading is True
+        assert paragraphs[1].text == "这是第一段。"
+        assert paragraphs[2].text == "这是第二段。"
 
     def test_parse_markdown_skips_heading(self, tmp_path):
         content = "## 方法\n\n我们采用了以下方法。\n\n## 结果\n\n结果显示如下。"
@@ -22,8 +24,11 @@ class TestMarkdownParser:
 
         paragraphs = parse_document(str(md_file))
 
-        assert len(paragraphs) == 2
-        assert all(not p.is_heading for p in paragraphs)
+        assert len(paragraphs) == 4
+        headings = [p for p in paragraphs if p.is_heading]
+        assert len(headings) == 2
+        assert headings[0].text == "方法"
+        assert headings[1].text == "结果"
 
     def test_parse_markdown_preserves_formatting(self, tmp_path):
         content = "这是一个包含 **加粗** 和 *斜体* 的段落。\n\n公式 $E=mc^2$ 很重要。"

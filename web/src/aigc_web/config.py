@@ -45,6 +45,9 @@ class Settings(BaseSettings):
     # 订单超时
     ORDER_TIMEOUT_MINUTES: int = 15  # pending 订单超时时间（分钟）
 
+    # 端口配置
+    BACKEND_PORT: int = 8000
+
     # 开发环境测试账号
     DEV_TEST_PHONES: str = ""
     DEV_BYPASS_PHONE: bool = False

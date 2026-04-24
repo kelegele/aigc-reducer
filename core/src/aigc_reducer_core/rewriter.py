@@ -65,7 +65,7 @@ class Rewriter:
 
             det_result = detection_results[i] if detection_results else {}
 
-            if det_result.get("risk_level") == "低风险":
+            if det_result.get("risk_level") == "low":
                 rewritten.append(para)
                 continue
 

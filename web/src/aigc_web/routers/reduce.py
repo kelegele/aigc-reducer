@@ -88,7 +88,7 @@ def list_tasks(
 
 @reduce_router.get("/tasks/{task_id}", response_model=TaskResponse)
 def get_task(
-    task_id: int,
+    task_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_current_user),
 ):
@@ -99,7 +99,7 @@ def get_task(
 
 @reduce_router.post("/tasks/{task_id}/estimate", response_model=CreditsEstimateResponse)
 def estimate_credits(
-    task_id: int,
+    task_id: str,
     operation: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_current_user),
@@ -112,7 +112,7 @@ def estimate_credits(
 
 @reduce_router.post("/tasks/{task_id}/detect")
 async def detect(
-    task_id: int,
+    task_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_current_user),
 ):
@@ -129,7 +129,7 @@ async def detect(
 
 @reduce_router.post("/tasks/{task_id}/reconstruct")
 async def reconstruct(
-    task_id: int,
+    task_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_current_user),
 ):
@@ -145,7 +145,7 @@ async def reconstruct(
 
 @reduce_router.post("/tasks/{task_id}/rewrite")
 async def rewrite(
-    task_id: int,
+    task_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_current_user),
 ):
@@ -161,7 +161,7 @@ async def rewrite(
 
 @reduce_router.put("/tasks/{task_id}/paragraphs/{index}")
 def confirm_paragraph(
-    task_id: int,
+    task_id: str,
     index: int,
     body: ParagraphChoiceRequest,
     db: Session = Depends(get_db),
@@ -185,7 +185,7 @@ def confirm_paragraph(
 
 @reduce_router.post("/tasks/{task_id}/finalize", response_model=TaskResponse)
 def finalize_task(
-    task_id: int,
+    task_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_current_user),
 ):

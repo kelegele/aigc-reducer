@@ -57,8 +57,19 @@ def _parse_markdown(file_path: str) -> List[Paragraph]:
         if in_code_block:
             continue
 
-        # 跳过标题行
+        # 标题行
         if line.strip().startswith("#"):
+            heading_text = line.strip().lstrip("#").strip()
+            if heading_text:
+                paragraphs.append(Paragraph(
+                    text=heading_text,
+                    index=index,
+                    is_heading=True,
+                    has_formula=False,
+                    has_code=False,
+                    original_format="markdown",
+                ))
+                index += 1
             continue
 
         # 跳过空行
@@ -149,50 +160,130 @@ def _parse_doc(file_path: str) -> List[Paragraph]:
 
 
 def _parse_pdf(file_path: str) -> List[Paragraph]:
-    """解析 PDF 文件。"""
+    """解析 PDF 文件，基于字符坐标分行分段。"""
     import pdfplumber
+    from collections import Counter
 
     paragraphs = []
     index = 0
 
     with pdfplumber.open(file_path) as pdf:
+        # 收集所有字符字号，取众数为正文字号
+        body_sizes: list[float] = []
+        for page in pdf.pages:
+            for ch in page.chars:
+                if ch["text"].strip():
+                    body_sizes.append(round(ch["size"], 1))
+        body_size = Counter(body_sizes).most_common(1)[0][0] if body_sizes else 12.0
+        heading_threshold = body_size * 1.2
+
         for page in pdf.pages:
             text = page.extract_text()
             if not text:
                 continue
 
-            # 按行分割，合并为段落
-            lines = text.split("\n")
-            current_para = []
+            # 构建 top → max_size 映射
+            line_size: dict[int, float] = {}
+            for ch in page.chars:
+                if not ch["text"].strip():
+                    continue
+                top_key = round(ch["top"])
+                size = round(ch["size"], 1)
+                if top_key not in line_size or size > line_size[top_key]:
+                    line_size[top_key] = size
 
-            for line in lines:
+            # 用 extract_text 的行结构做基础分段
+            current_para: list[str] = []
+            current_is_heading = False
+            prev_top: float | None = None
+
+            for line in text.split("\n"):
                 stripped = line.strip()
                 if not stripped:
-                    # 空行 = 段落分隔
                     if current_para:
-                        para_text = " ".join(current_para)
-                        has_formula = bool(re.search(r"\$[^$]+\$", para_text))
                         paragraphs.append(Paragraph(
-                            text=para_text,
+                            text="".join(current_para),
                             index=index,
-                            is_heading=False,
-                            has_formula=has_formula,
+                            is_heading=current_is_heading,
+                            has_formula=bool(re.search(r"\$[^$]+\$", "".join(current_para))),
                             original_format="pdf",
                         ))
                         index += 1
                         current_para = []
-                else:
-                    current_para.append(stripped)
+                        current_is_heading = False
+                        prev_top = None
+                    continue
 
-            # 处理最后一个段落
+                # 找该行的 top 和 size
+                first_char_top = None
+                first_char_size = body_size
+                for ch in page.chars:
+                    if ch["text"].strip() and stripped.startswith(ch["text"].strip()):
+                        first_char_top = ch["top"]
+                        first_char_size = round(ch["size"], 1)
+                        break
+
+                is_heading = first_char_size >= heading_threshold or (
+                    len(stripped) <= 8 and not stripped.endswith(("。", "，", "、", "；", "：", ".", ","))
+                    and not stripped.startswith("-")
+                )
+
+                # 段落分隔：标题行独立成段 + 前行句末标点 + 间距突增
+                should_split = False
+                if is_heading:
+                    # heading 行：先输出当前段，heading 自身也独立
+                    if current_para:
+                        should_split = True
+                elif current_para:
+                    last_text = current_para[-1]
+                    ended = last_text.rstrip().endswith(("。", "！", "？", ".", "!", "?", "）", ")"))
+                    if ended:
+                        should_split = True
+                    elif prev_top is not None and first_char_top is not None:
+                        gap = first_char_top - prev_top
+                        if gap > body_size * 2.5:
+                            should_split = True
+
+                if should_split:
+                    paragraphs.append(Paragraph(
+                        text="".join(current_para),
+                        index=index,
+                        is_heading=current_is_heading,
+                        has_formula=bool(re.search(r"\$[^$]+\$", "".join(current_para))),
+                        original_format="pdf",
+                    ))
+                    index += 1
+                    current_para = []
+                    current_is_heading = False
+
+                if not current_para:
+                    current_is_heading = is_heading
+                current_para.append(stripped)
+
+                # heading 行独立成段，立即输出
+                if is_heading:
+                    paragraphs.append(Paragraph(
+                        text="".join(current_para),
+                        index=index,
+                        is_heading=True,
+                        has_formula=bool(re.search(r"\$[^$]+\$", "".join(current_para))),
+                        original_format="pdf",
+                    ))
+                    index += 1
+                    current_para = []
+                    current_is_heading = False
+                    prev_top = None
+                    continue
+
+                if first_char_top is not None:
+                    prev_top = first_char_top
+
             if current_para:
-                para_text = " ".join(current_para)
-                has_formula = bool(re.search(r"\$[^$]+\$", para_text))
                 paragraphs.append(Paragraph(
-                    text=para_text,
+                    text="".join(current_para),
                     index=index,
-                    is_heading=False,
-                    has_formula=has_formula,
+                    is_heading=current_is_heading,
+                    has_formula=bool(re.search(r"\$[^$]+\$", "".join(current_para))),
                     original_format="pdf",
                 ))
                 index += 1

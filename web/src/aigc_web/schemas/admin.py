@@ -113,7 +113,7 @@ class AdminTransactionResponse(BaseModel):
     amount: int
     balance_after: int
     ref_type: str | None
-    ref_id: int | None
+    ref_id: str | int | None
     remark: str | None
     created_at: datetime
 

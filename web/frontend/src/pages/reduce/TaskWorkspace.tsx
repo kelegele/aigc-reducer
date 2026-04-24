@@ -42,28 +42,29 @@ import {
   finalizeTask,
   type TaskResponse,
 } from "../../api/reduce";
+import {
+  TASK_STATUS,
+  TASK_STATUS_LABELS,
+  RISK_LEVEL,
+  RISK_LEVEL_LABELS,
+  RISK_LEVEL_COLORS,
+  PARAGRAPH_CHOICE,
+  PARAGRAPH_CHOICE_LABELS,
+  type ParagraphChoice,
+} from "../../constants/reduce";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
-// ---- 风险等级配色映射 ----
-
-const RISK_LABELS: Record<string, string> = {
-  low: "低风险",
-  medium: "中风险",
-  medium_high: "中高",
-  high: "高风险",
-};
-
 function riskColor(level: string, token: ReturnType<typeof theme.useToken>["token"]): string {
   switch (level) {
-    case "low":
+    case RISK_LEVEL.LOW:
       return token.colorSuccess;
-    case "medium":
+    case RISK_LEVEL.MEDIUM:
       return token.colorInfo;
-    case "medium_high":
+    case RISK_LEVEL.MEDIUM_HIGH:
       return token.colorWarning;
-    case "high":
+    case RISK_LEVEL.HIGH:
       return token.colorError;
     default:
       return token.colorTextTertiary;
@@ -71,33 +72,16 @@ function riskColor(level: string, token: ReturnType<typeof theme.useToken>["toke
 }
 
 function riskTagColor(level: string): string {
-  switch (level) {
-    case "low":
-      return "success";
-    case "medium":
-      return "processing";
-    case "medium_high":
-      return "warning";
-    case "high":
-      return "error";
-    default:
-      return "default";
-  }
+  return RISK_LEVEL_COLORS[level] ?? "default";
 }
-
-// ---- 段落审阅选择类型 ----
-
-type ParagraphChoice = "aggressive" | "conservative" | "original" | "manual";
 
 // ---- 组件 ----
 
 export default function TaskWorkspace() {
-  const { taskId: taskIdStr } = useParams<{ taskId: string }>();
+  const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
   const { token: themeToken } = theme.useToken();
   const { message, modal } = AntApp.useApp();
-
-  const taskId = Number(taskIdStr);
 
   // ---- 核心状态 ----
   const [task, setTask] = useState<TaskResponse | null>(null);
@@ -134,7 +118,7 @@ export default function TaskWorkspace() {
 
   // ---- 初始化加载 ----
   useEffect(() => {
-    if (!taskId || Number.isNaN(taskId)) {
+    if (!taskId) {
       message.error("无效的任务 ID");
       navigate("/dashboard");
       return;
@@ -162,25 +146,25 @@ export default function TaskWorkspace() {
 
   const syncStepFromStatus = useCallback((t: TaskResponse) => {
     switch (t.status) {
-      case "parsing":
+      case TASK_STATUS.PARSING:
         setCurrentStep(0);
         break;
-      case "detecting":
+      case TASK_STATUS.DETECTING:
         setCurrentStep(1);
         break;
-      case "detected":
+      case TASK_STATUS.DETECTED:
         setCurrentStep(1);
         break;
-      case "rewriting":
+      case TASK_STATUS.REWRITING:
         setCurrentStep(3);
         break;
-      case "rewritten":
+      case TASK_STATUS.REWRITTEN:
         setCurrentStep(3);
         break;
-      case "completed":
+      case TASK_STATUS.COMPLETED:
         setCurrentStep(4);
         break;
-      case "failed":
+      case TASK_STATUS.FAILED:
         // 保持当前步骤，显示错误
         break;
       default:
@@ -190,7 +174,7 @@ export default function TaskWorkspace() {
 
   // ---- 自动启动检测 ----
   useEffect(() => {
-    if (task && task.status === "detecting" && !detecting && !sseController) {
+    if (task && task.status === TASK_STATUS.DETECTING && !detecting && !sseController) {
       startDetection();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -198,7 +182,7 @@ export default function TaskWorkspace() {
 
   // ---- 自动启动改写 SSE ----
   useEffect(() => {
-    if (task && task.status === "rewriting" && !rewriting && !sseController) {
+    if (task && task.status === TASK_STATUS.REWRITING && !rewriting && !sseController) {
       startRewriteSSE();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -237,9 +221,9 @@ export default function TaskWorkspace() {
             if (newParagraphs[idx]) {
               newParagraphs[idx] = {
                 ...newParagraphs[idx],
-                risk_level: String(data.risk_level ?? "low"),
+                risk_level: String(data.risk_level ?? RISK_LEVEL.LOW),
                 composite_score: data.composite_score != null ? Number(data.composite_score) : null,
-                status: "detected",
+                status: TASK_STATUS.DETECTED,
               };
             }
             return { ...prev, paragraphs: newParagraphs };
@@ -392,7 +376,7 @@ export default function TaskWorkspace() {
                 ...newParagraphs[idx],
                 rewrite_aggressive: aggressive,
                 rewrite_conservative: conservative,
-                status: "rewritten",
+                status: TASK_STATUS.REWRITTEN,
               };
             }
             return { ...prev, paragraphs: newParagraphs };
@@ -430,7 +414,7 @@ export default function TaskWorkspace() {
       setConfirmingIndex(index);
       try {
         let manualText: string | undefined;
-        if (choice === "manual") {
+        if (choice === PARAGRAPH_CHOICE.MANUAL) {
           manualText = manualTexts.get(index);
           if (!manualText?.trim()) {
             message.error("请输入手动改写内容");
@@ -470,10 +454,10 @@ export default function TaskWorkspace() {
 
   // ---- 批量选择 ----
   const handleBatchChoice = useCallback(
-    (choice: "aggressive" | "conservative") => {
+    (choice: PARAGRAPH_CHOICE.AGGRESSIVE | PARAGRAPH_CHOICE.CONSERVATIVE) => {
       if (!task) return;
       const paragraphsNeedingRewrite = task.paragraphs.filter(
-        (p) => p.status === "rewritten" && p.risk_level && p.risk_level !== "low",
+        (p) => p.status === TASK_STATUS.REWRITTEN && p.risk_level && p.risk_level !== RISK_LEVEL.LOW,
       );
       const promises = paragraphsNeedingRewrite.map((p) =>
         confirmParagraph(taskId, p.index, choice).then(() => p.index),
@@ -520,11 +504,11 @@ export default function TaskWorkspace() {
     if (!task) return { low: 0, medium: 0, medium_high: 0, high: 0, needsProcessing: 0, total: 0 };
     const counts = { low: 0, medium: 0, medium_high: 0, high: 0, needsProcessing: 0, total: task.paragraphs.length };
     for (const p of task.paragraphs) {
-      const lvl = p.risk_level ?? "low";
+      const lvl = p.risk_level ?? RISK_LEVEL.LOW;
       if (lvl in counts) {
         (counts as Record<string, number>)[lvl]++;
       }
-      if (lvl !== "low" && lvl !== null) counts.needsProcessing++;
+      if (lvl !== RISK_LEVEL.LOW && lvl !== null) counts.needsProcessing++;
     }
     return counts;
   }, [task]);
@@ -532,7 +516,7 @@ export default function TaskWorkspace() {
   const allConfirmed = useMemo(() => {
     if (!task) return false;
     const needConfirm = task.paragraphs.filter(
-      (p) => p.risk_level && p.risk_level !== "low" && p.status === "rewritten",
+      (p) => p.risk_level && p.risk_level !== RISK_LEVEL.LOW && p.status === TASK_STATUS.REWRITTEN,
     );
     if (needConfirm.length === 0) return false;
     return needConfirm.every((p) => paragraphChoices.has(p.index) || p.user_choice);
@@ -541,7 +525,7 @@ export default function TaskWorkspace() {
   const paragraphsNeedingReview = useMemo(() => {
     if (!task) return [];
     return task.paragraphs.filter(
-      (p) => p.risk_level && p.risk_level !== "low" && p.status === "rewritten",
+      (p) => p.risk_level && p.risk_level !== RISK_LEVEL.LOW && p.status === TASK_STATUS.REWRITTEN,
     );
   }, [task]);
 
@@ -602,7 +586,7 @@ export default function TaskWorkspace() {
         title="段落检测结果"
         style={{ marginBottom: 16 }}
         extra={
-          !detecting && task.status === "detected" && (
+          !detecting && task.status === TASK_STATUS.DETECTED && (
             <Space>
               <Tag color="success">{stats.low} 段低风险</Tag>
               <Tag color="warning">{stats.needsProcessing} 段需处理</Tag>
@@ -630,8 +614,8 @@ export default function TaskWorkspace() {
                   #{p.index + 1}
                 </Text>
                 {p.is_heading && <Tag style={{ fontSize: 11 }}>标题</Tag>}
-                <Tag color={riskTagColor(p.risk_level ?? "low")} style={{ margin: 0 }}>
-                  {RISK_LABELS[p.risk_level ?? "low"] ?? "未知"}
+                <Tag color={riskTagColor(p.risk_level ?? RISK_LEVEL.LOW)} style={{ margin: 0 }}>
+                  {RISK_LEVEL_LABELS[p.risk_level ?? RISK_LEVEL.LOW] ?? p.risk_level ?? "低风险"}
                 </Tag>
                 {p.composite_score != null && (
                   <Text type="secondary" style={{ fontSize: 12 }}>
@@ -656,7 +640,7 @@ export default function TaskWorkspace() {
       </Card>
 
       {/* 检测完成后操作按钮 */}
-      {!detecting && task.status === "detected" && (
+      {!detecting && task.status === TASK_STATUS.DETECTED && (
         <Card>
           <Space>
             <Button
@@ -699,7 +683,7 @@ export default function TaskWorkspace() {
 
   const renderRewriteStep = () => {
     // 改写进行中
-    if (rewriting && task.status === "rewriting") {
+    if (rewriting && task.status === TASK_STATUS.REWRITING) {
       return (
         <Card style={{ textAlign: "center", padding: 32 }}>
           <Progress
@@ -715,7 +699,7 @@ export default function TaskWorkspace() {
     }
 
     // 审阅模式
-    if (task.status === "rewritten" || (paragraphsNeedingReview.length > 0 && !rewriting)) {
+    if (task.status === TASK_STATUS.REWRITTEN || (paragraphsNeedingReview.length > 0 && !rewriting)) {
       return (
         <div>
           {/* 工具栏 */}
@@ -744,10 +728,10 @@ export default function TaskWorkspace() {
                       onClick={toggleExpandAll}
                     />
                   </Tooltip>
-                  <Button size="small" onClick={() => handleBatchChoice("aggressive")}>
+                  <Button size="small" onClick={() => handleBatchChoice(PARAGRAPH_CHOICE.AGGRESSIVE)}>
                     全选方案 A（激进）
                   </Button>
-                  <Button size="small" onClick={() => handleBatchChoice("conservative")}>
+                  <Button size="small" onClick={() => handleBatchChoice(PARAGRAPH_CHOICE.CONSERVATIVE)}>
                     全选方案 B（保守）
                   </Button>
                 </>
@@ -798,7 +782,7 @@ export default function TaskWorkspace() {
             key={p.index}
             size="small"
             style={{
-              borderLeft: `3px solid ${riskColor(p.risk_level ?? "low", themeToken)}`,
+              borderLeft: `3px solid ${riskColor(p.risk_level ?? RISK_LEVEL.LOW, themeToken)}`,
               opacity: confirmed ? 0.7 : 1,
             }}
           >
@@ -822,8 +806,8 @@ export default function TaskWorkspace() {
               <Text strong>
                 段落 #{p.index + 1}
               </Text>
-              <Tag color={riskTagColor(p.risk_level ?? "low")} style={{ margin: 0 }}>
-                {RISK_LABELS[p.risk_level ?? "low"]}
+              <Tag color={riskTagColor(p.risk_level ?? RISK_LEVEL.LOW)} style={{ margin: 0 }}>
+                {RISK_LEVEL_LABELS[p.risk_level ?? RISK_LEVEL.LOW]}
               </Tag>
               {p.composite_score != null && (
                 <Text type="secondary" style={{ fontSize: 12 }}>
@@ -863,7 +847,7 @@ export default function TaskWorkspace() {
                   value={choice ?? null}
                   onChange={async (e) => {
                     const selected = e.target.value as ParagraphChoice;
-                    if (selected === "manual") {
+                    if (selected === PARAGRAPH_CHOICE.MANUAL) {
                       setParagraphChoices((prev) => new Map(prev).set(p.index, selected));
                     } else {
                       await handleConfirmParagraph(p.index, selected);
@@ -878,10 +862,10 @@ export default function TaskWorkspace() {
                         padding: 12,
                         background: themeToken.colorBgLayout,
                         borderRadius: 6,
-                        border: choice === "aggressive" ? `1px solid ${themeToken.colorPrimary}` : "1px solid transparent",
+                        border: choice === PARAGRAPH_CHOICE.AGGRESSIVE ? `1px solid ${themeToken.colorPrimary}` : "1px solid transparent",
                       }}
                     >
-                      <Radio value="aggressive" disabled={confirmed && choice !== "aggressive"}>
+                      <Radio value={PARAGRAPH_CHOICE.AGGRESSIVE} disabled={confirmed && choice !== PARAGRAPH_CHOICE.AGGRESSIVE}>
                         <Text strong style={{ color: themeToken.colorPrimary }}>方案 A（激进）</Text>
                       </Radio>
                       {p.rewrite_aggressive && (
@@ -905,10 +889,10 @@ export default function TaskWorkspace() {
                         padding: 12,
                         background: themeToken.colorBgLayout,
                         borderRadius: 6,
-                        border: choice === "conservative" ? `1px solid ${themeToken.colorPrimary}` : "1px solid transparent",
+                        border: choice === PARAGRAPH_CHOICE.CONSERVATIVE ? `1px solid ${themeToken.colorPrimary}` : "1px solid transparent",
                       }}
                     >
-                      <Radio value="conservative" disabled={confirmed && choice !== "conservative"}>
+                      <Radio value={PARAGRAPH_CHOICE.CONSERVATIVE} disabled={confirmed && choice !== PARAGRAPH_CHOICE.CONSERVATIVE}>
                         <Text strong style={{ color: themeToken.colorInfo }}>方案 B（保守）</Text>
                       </Radio>
                       {p.rewrite_conservative && (
@@ -932,10 +916,10 @@ export default function TaskWorkspace() {
                         padding: 12,
                         background: themeToken.colorBgLayout,
                         borderRadius: 6,
-                        border: choice === "original" ? `1px solid ${themeToken.colorPrimary}` : "1px solid transparent",
+                        border: choice === PARAGRAPH_CHOICE.ORIGINAL ? `1px solid ${themeToken.colorPrimary}` : "1px solid transparent",
                       }}
                     >
-                      <Radio value="original" disabled={confirmed && choice !== "original"}>
+                      <Radio value={PARAGRAPH_CHOICE.ORIGINAL} disabled={confirmed && choice !== PARAGRAPH_CHOICE.ORIGINAL}>
                         <Text strong>保留原文</Text>
                       </Radio>
                     </div>
@@ -946,13 +930,13 @@ export default function TaskWorkspace() {
                         padding: 12,
                         background: themeToken.colorBgLayout,
                         borderRadius: 6,
-                        border: choice === "manual" ? `1px solid ${themeToken.colorPrimary}` : "1px solid transparent",
+                        border: choice === PARAGRAPH_CHOICE.MANUAL ? `1px solid ${themeToken.colorPrimary}` : "1px solid transparent",
                       }}
                     >
-                      <Radio value="manual" disabled={confirmed && choice !== "manual"}>
+                      <Radio value={PARAGRAPH_CHOICE.MANUAL} disabled={confirmed && choice !== PARAGRAPH_CHOICE.MANUAL}>
                         <Text strong>手动输入</Text>
                       </Radio>
-                      {choice === "manual" && !confirmed && (
+                      {choice === PARAGRAPH_CHOICE.MANUAL && !confirmed && (
                         <div style={{ marginTop: 8 }}>
                           <TextArea
                             rows={4}
@@ -967,7 +951,7 @@ export default function TaskWorkspace() {
                             type="primary"
                             style={{ marginTop: 8 }}
                             loading={confirmingIndex === p.index}
-                            onClick={() => handleConfirmParagraph(p.index, "manual")}
+                            onClick={() => handleConfirmParagraph(p.index, PARAGRAPH_CHOICE.MANUAL)}
                           >
                             确认
                           </Button>
@@ -1017,8 +1001,8 @@ export default function TaskWorkspace() {
               size="small"
               style={{ height: "100%" }}
               extra={
-                <Tag color={riskTagColor(p.risk_level ?? "low")}>
-                  {RISK_LABELS[p.risk_level ?? "low"]} {p.composite_score != null ? `(${p.composite_score})` : ""}
+                <Tag color={riskTagColor(p.risk_level ?? RISK_LEVEL.LOW)}>
+                  {RISK_LEVEL_LABELS[p.risk_level ?? RISK_LEVEL.LOW]} {p.composite_score != null ? `(${p.composite_score})` : ""}
                 </Tag>
               }
             >
@@ -1046,18 +1030,18 @@ export default function TaskWorkspace() {
                     padding: 12,
                     borderRadius: 6,
                     border:
-                      choice === "aggressive"
+                      choice === PARAGRAPH_CHOICE.AGGRESSIVE
                         ? `2px solid ${themeToken.colorPrimary}`
                         : `1px solid ${themeToken.colorBorderSecondary}`,
                     cursor: confirmed ? "default" : "pointer",
                   }}
                   onClick={() => {
-                    if (!confirmed) handleConfirmParagraph(p.index, "aggressive");
+                    if (!confirmed) handleConfirmParagraph(p.index, PARAGRAPH_CHOICE.AGGRESSIVE);
                   }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                     <Text strong style={{ color: themeToken.colorPrimary }}>方案 A（激进）</Text>
-                    {choice === "aggressive" && <CheckCircleOutlined style={{ color: themeToken.colorSuccess }} />}
+                    {choice === PARAGRAPH_CHOICE.AGGRESSIVE && <CheckCircleOutlined style={{ color: themeToken.colorSuccess }} />}
                   </div>
                   <div
                     style={{
@@ -1079,18 +1063,18 @@ export default function TaskWorkspace() {
                     padding: 12,
                     borderRadius: 6,
                     border:
-                      choice === "conservative"
+                      choice === PARAGRAPH_CHOICE.CONSERVATIVE
                         ? `2px solid ${themeToken.colorPrimary}`
                         : `1px solid ${themeToken.colorBorderSecondary}`,
                     cursor: confirmed ? "default" : "pointer",
                   }}
                   onClick={() => {
-                    if (!confirmed) handleConfirmParagraph(p.index, "conservative");
+                    if (!confirmed) handleConfirmParagraph(p.index, PARAGRAPH_CHOICE.CONSERVATIVE);
                   }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                     <Text strong style={{ color: themeToken.colorInfo }}>方案 B（保守）</Text>
-                    {choice === "conservative" && <CheckCircleOutlined style={{ color: themeToken.colorSuccess }} />}
+                    {choice === PARAGRAPH_CHOICE.CONSERVATIVE && <CheckCircleOutlined style={{ color: themeToken.colorSuccess }} />}
                   </div>
                   <div
                     style={{
@@ -1110,7 +1094,7 @@ export default function TaskWorkspace() {
                 <Space>
                   <Button
                     size="small"
-                    onClick={() => handleConfirmParagraph(p.index, "original")}
+                    onClick={() => handleConfirmParagraph(p.index, PARAGRAPH_CHOICE.ORIGINAL)}
                     disabled={confirmed}
                   >
                     保留原文
@@ -1118,14 +1102,14 @@ export default function TaskWorkspace() {
                   <Button
                     size="small"
                     onClick={() => {
-                      setParagraphChoices((prev) => new Map(prev).set(p.index, "manual"));
+                      setParagraphChoices((prev) => new Map(prev).set(p.index, PARAGRAPH_CHOICE.MANUAL));
                     }}
                     disabled={confirmed}
                   >
                     手动输入
                   </Button>
                 </Space>
-                {choice === "manual" && !confirmed && (
+                {choice === PARAGRAPH_CHOICE.MANUAL && !confirmed && (
                   <div style={{ marginTop: 8 }}>
                     <TextArea
                       rows={3}
@@ -1140,7 +1124,7 @@ export default function TaskWorkspace() {
                       type="primary"
                       style={{ marginTop: 8 }}
                       loading={confirmingIndex === p.index}
-                      onClick={() => handleConfirmParagraph(p.index, "manual")}
+                      onClick={() => handleConfirmParagraph(p.index, PARAGRAPH_CHOICE.MANUAL)}
                     >
                       确认
                     </Button>
@@ -1179,7 +1163,7 @@ export default function TaskWorkspace() {
     if (!t) return null;
 
     const originalParagraphs = t.paragraphs;
-    const rewrittenCount = originalParagraphs.filter((p) => p.user_choice && p.user_choice !== "original").length;
+    const rewrittenCount = originalParagraphs.filter((p) => p.user_choice && p.user_choice !== PARAGRAPH_CHOICE.ORIGINAL).length;
 
     return (
       <div>
@@ -1238,9 +1222,9 @@ export default function TaskWorkspace() {
                     key={p.index}
                     style={{
                       position: "relative",
-                      paddingLeft: p.risk_level && p.risk_level !== "low" ? 12 : 0,
+                      paddingLeft: p.risk_level && p.risk_level !== RISK_LEVEL.LOW ? 12 : 0,
                       borderLeft:
-                        p.risk_level && p.risk_level !== "low"
+                        p.risk_level && p.risk_level !== RISK_LEVEL.LOW
                           ? `3px solid ${riskColor(p.risk_level, themeToken)}`
                           : "none",
                       marginBottom: 12,
@@ -1280,7 +1264,7 @@ export default function TaskWorkspace() {
               <div style={{ maxHeight: 600, overflow: "auto", padding: "0 4px" }}>
                 {originalParagraphs.map((p) => {
                   const displayText = p.final_text ?? p.original_text;
-                  const wasRewritten = p.user_choice && p.user_choice !== "original";
+                  const wasRewritten = p.user_choice && p.user_choice !== PARAGRAPH_CHOICE.ORIGINAL;
                   return (
                     <div
                       key={p.index}
@@ -1288,7 +1272,7 @@ export default function TaskWorkspace() {
                         position: "relative",
                         paddingLeft: wasRewritten ? 12 : 0,
                         borderLeft: wasRewritten
-                          ? `3px solid ${riskColor(p.risk_level ?? "low", themeToken)}`
+                          ? `3px solid ${riskColor(p.risk_level ?? RISK_LEVEL.LOW, themeToken)}`
                           : "none",
                         marginBottom: 12,
                       }}
@@ -1345,7 +1329,7 @@ export default function TaskWorkspace() {
         <Button
           type="text"
           icon={<LeftOutlined />}
-          onClick={() => navigate("/dashboard")}
+          onClick={() => navigate(-1)}
         />
         <Title level={4} style={{ margin: 0, flex: 1 }}>
           {task.title || "任务工作区"}
@@ -1353,14 +1337,14 @@ export default function TaskWorkspace() {
         <Tag
           style={{ fontSize: 12 }}
           color={
-            task.status === "completed"
+            task.status === TASK_STATUS.COMPLETED
               ? "success"
-              : ["detecting", "reconstructing", "rewriting", "finalizing"].includes(task.status)
+              : [TASK_STATUS.DETECTING, TASK_STATUS.RECONSTRUCTING, TASK_STATUS.REWRITING, TASK_STATUS.FINALIZING].includes(task.status)
                 ? "processing"
                 : "default"
           }
         >
-          {task.status}
+          {TASK_STATUS_LABELS[task.status] ?? task.status}
         </Tag>
       </div>
 

@@ -98,7 +98,7 @@ def test_handle_payment_callback_paid(db_session):
     assert tx.amount == 110
     assert tx.balance_after == 110
     assert tx.ref_type == "payment_order"
-    assert tx.ref_id == order.id
+    assert tx.ref_id == str(order.id)
 
 
 def test_handle_payment_callback_idempotent(db_session):
