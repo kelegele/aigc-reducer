@@ -8,50 +8,77 @@ AIGC Reducer — 降低学术论文 AIGC 查重率的 CLI 工具 + Web 服务。
 
 ## Monorepo Structure
 
-- `cli/` — CLI 工具（Python），所有源码、测试、依赖配置均在此目录下
-- `web/` — Web 服务后端（FastAPI + SQLAlchemy + Alembic）
+- `core/` — 共享检测/改写引擎（`aigc-reducer-core` 包），CLI 和 Web 均依赖此包
+- `cli/` — CLI 工具（Python），依赖 `core/`，提供交互式终端界面
+- `web/` — Web 服务后端（FastAPI + SQLAlchemy + Alembic），依赖 `core/`
 - `web/frontend/` — Web 前端（React + TypeScript + Ant Design）
 - `docs/superpowers/` — 设计文档和实现计划
 
 ## Development Commands
 
+### Core (from `core/` directory)
+
+```bash
+uv sync                    # 安装依赖
+uv run pytest tests/ -v    # 运行测试
+uv run pytest tests/test_detector.py::test_function_name -v  # 单个用例
+```
+
 ### CLI (from `cli/` directory)
 
 ```bash
-# 安装依赖
-uv sync
+uv sync                    # 安装依赖（自动链接 core/）
+uv run aigc-reduce         # 运行 CLI
+uv run pytest tests/       # 运行测试
+```
 
-# 运行 CLI
-uv run aigc-reduce
+### Web Backend (from `web/` directory)
 
-# 运行测试
-uv run pytest tests/
+```bash
+uv sync                    # 安装依赖（自动链接 core/）
+uv run uvicorn aigc_web.main:app --port 9000  # 启动开发服务器
+uv run pytest tests/ -v    # 运行测试
+uv run alembic upgrade head                       # 应用迁移
+uv run alembic revision --autogenerate -m "desc"  # 生成迁移
+```
 
-# 运行测试（带覆盖率）
-uv run pytest tests/ --cov=aigc_reducer
+### Web Frontend (from `web/frontend/` directory)
 
-# 运行单个测试文件
-uv run pytest tests/test_detector.py
-
-# 运行单个测试用例
-uv run pytest tests/test_detector.py::test_function_name -v
+```bash
+npm install    # 安装依赖
+npm run dev    # 启动开发服务器（端口 5173）
+npm run build  # 构建
 ```
 
 ## Architecture
 
-### 6-Step Interactive Workflow (cli.py)
+### 3-Tier Core Architecture
 
-输入文件 → 解析为段落 → 选择风格+检测模式 → 扫描风险 → (可选)全量语义重构 → 逐段 A/B 改写确认 → 输出三文件
+```
+core/aigc-reducer-core  (共享引擎，同步 Python)
+    ├── cli/            (CLI 包装，用 from_env() 初始化 LLMClient)
+    └── web/            (Web 服务，注入 config 构造 LLMClient)
+         └── frontend/  (React SPA，SSE 流式交互)
+```
 
-### Core Components
+- `core/` 是独立 `aigc-reducer-core` 包，CLI 和 Web 通过 `pyproject.toml` 的 `[tool.uv.sources]` 链接
+- `LLMClient` 支持构造函数注入（Web 用）和 `from_env()` 类方法（CLI 用）
+- `AIGCDetector` 和 `Rewriter` 接受 `cancel_event: threading.Event` 支持取消操作
+
+### 6-Step Interactive Workflow
+
+输入文件 → 解析为段落 → 选择风格+检测模式 → 扫描风险 → (可选)全量语义重构 → 逐段 A/B 改写确认 → 输出结果
+
+### Core Components (`core/src/aigc_reducer_core/`)
 
 - **parser.py** — 文档解析器，支持 .md/.docx/.doc/.pdf，输出 `Paragraph` dataclass 列表
-- **detector.py** — 检测编排器，两种模式：
-  - `rules` 模式：5 个规则检测器各 20% 权重求综合分
-  - `llm` 模式：LLM 反查模拟商业平台判断
-- **rewriter.py** — 改写编排器，管理 5 种风格的 aggressive/conservative 两档改写
-- **llm_client.py** — LiteLLM 统一客户端，通过 `LLM_MODEL`/`LLM_API_KEY`/`LLM_BASE_URL` 环境变量配置
+- **detector.py** — 检测编排器，两种模式（`cancel_event` 支持取消）：
+  - `rules` 模式：5 个规则检测器各 20% 权重求综合分（免费）
+  - `llm` 模式：LLM 反查模拟商业平台判断（消耗积分）
+- **rewriter.py** — 改写编排器，管理 5 种风格的 aggressive/conservative 两档改写（`cancel_event` 支持取消）；`rewrite_single()` 方法供 Web 逐段调用
+- **llm_client.py** — LiteLLM 统一客户端；构造函数注入 `(model, api_key, base_url)`，`from_env()` 类方法供 CLI 使用
 - **report.py** — Rich CLI 输出（扫描报告、进度、最终报告）
+- **data/ai_connectors.yaml** — AI 连接词数据（通过 `importlib.resources` 加载）
 
 ### Detection Modules (`detectors/`)
 
@@ -85,9 +112,12 @@ uv run pytest tests/test_detector.py::test_function_name -v
 
 ## LLM Configuration
 
-通过 `cli/.env` 文件配置（参考 `cli/.env.example`）。LLM 调用统一走 LiteLLM，模型标识格式为 `供应商/模型名`。`llm_client.py` 内置了各供应商默认 base_url，大部分情况只需配置 `LLM_MODEL` 和 `LLM_API_KEY`。
+- **CLI**: 通过 `cli/.env` 文件配置（参考 `cli/.env.example`），`LLMClient.from_env()` 自动读取
+- **Web**: 通过 `web/.env` 的 `LLM_MODEL`/`LLM_API_KEY`/`LLM_BASE_URL` 配置，`ReduceService` 构造注入
 
-## Output Files
+模型标识格式为 `供应商/模型名`。`llm_client.py` 内置了各供应商默认 base_url，大部分情况只需配置 `LLM_MODEL` 和 `LLM_API_KEY`。
+
+## Output Files (CLI)
 
 运行后在 `cli/output/` 生成三个文件：
 - `*_reduced.md` — 改写后全文
@@ -257,21 +287,6 @@ op.create_unique_constraint(None, 'table', ['col'])
 - **前端端口**: 5173（Vite dev server）
 - **前端代理**: `vite.config.ts` 通过 `loadEnv` 读取 `BACKEND_PORT`，代理 `/api` 请求到后端
 
-```bash
-# 安装依赖
-uv sync
-
-# 启动后端（开发模式）
-uv run uvicorn aigc_web.main:app --port 9000
-
-# 运行后端测试
-uv run pytest tests/ -v
-
-# 数据库迁移
-uv run alembic revision --autogenerate -m "description"
-uv run alembic upgrade head
-```
-
 ### Web Service Architecture
 
 FastAPI 分层架构：`routers/` → `dependencies.py` → `services/` → `models/` + `schemas/`
@@ -280,10 +295,10 @@ FastAPI 分层架构：`routers/` → `dependencies.py` → `services/` → `mod
 - **config.py** — pydantic-settings，从 `.env` 读取配置
 - **database.py** — SQLAlchemy Base、engine、get_db
 - **dependencies.py** — FastAPI 依赖注入（JWT 认证、SMS 服务）
-- **models/** — User、CreditAccount、RechargePackage、PaymentOrder、CreditTransaction ORM 模型
-- **schemas/** — Pydantic 请求/响应模型：auth.py、credits.py、admin.py
-- **services/** — 业务逻辑：token.py（JWT）、sms.py（验证码）、auth.py（登录注册）、credit.py（积分充值/消费/流水）、payment.py（支付抽象层 + 支付宝 + 订单管理）、admin.py（管理后台：套餐CRUD、用户管理、数据看板、配置）
-- **routers/** — API 路由：auth.py（/api/auth/*）、credits.py（/api/credits/*）、admin.py（/api/admin/*）
+- **models/** — User、CreditAccount、RechargePackage、PaymentOrder、CreditTransaction、ReductionTask、ReductionParagraph ORM 模型
+- **schemas/** — Pydantic 请求/响应模型：auth.py、credits.py、admin.py、reduce.py
+- **services/** — 业务逻辑：token.py（JWT）、sms.py（验证码）、auth.py（登录注册）、credit.py（积分充值/消费/流水）、payment.py（支付抽象层 + 支付宝 + 订单管理）、admin.py（管理后台）、reduce.py（P3 检测/改写，SSE 流式推送）
+- **routers/** — API 路由：auth.py（/api/auth/*）、credits.py（/api/credits/*）、admin.py（/api/admin/*）、reduce.py（/api/reduce/*）
 
 ### Web Frontend (from `web/frontend/` directory)
 
@@ -337,6 +352,30 @@ npm run build
 | GET | /api/admin/config | 获取积分配置（admin） |
 | PUT | /api/admin/config | 更新积分配置（admin） |
 
+### P3: Reduce API (检测/改写)
+
+任务生命周期：`parsing` → `detecting` → `detected` → `rewriting` → `rewritten` → `completed` / `failed`
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | /api/reduce/tasks | 创建任务（multipart: file 或 text + detect_mode + style） |
+| GET | /api/reduce/tasks | 用户任务列表（分页） |
+| GET | /api/reduce/tasks/{id} | 任务详情（含所有段落） |
+| POST | /api/reduce/tasks/{id}/estimate | 估算积分消耗 |
+| POST | /api/reduce/tasks/{id}/detect | 开始检测（SSE 流式） |
+| POST | /api/reduce/tasks/{id}/reconstruct | 全量语义重构（SSE 流式） |
+| POST | /api/reduce/tasks/{id}/rewrite | 开始改写（SSE 流式） |
+| PUT | /api/reduce/tasks/{id}/paragraphs/{index} | 确认段落选择（aggressive/conservative/original/manual） |
+| POST | /api/reduce/tasks/{id}/finalize | 生成最终文档 |
+
+**SSE 格式**：`data: {JSON}\n\n`，无 `event:` 行。前端用 `fetch()` + `ReadableStream` 解析，`AbortController` 支持取消。
+
+**积分计费**：
+- Rules 检测：免费
+- LLM 检测 / 全量重构 / 改写：按 token × `CREDITS_PER_TOKEN` 扣减，操作前预检余额
+
+**关键实现**：`ReduceService` 中所有 LLM 调用通过 `asyncio.to_thread()` 将同步 core 代码桥接到 FastAPI 异步事件循环。
+
 ### Credits System
 
 积分经济闭环：充值套餐 → 支付订单 → 积分到账 → 积分消费（P3 检测/改写）。
@@ -358,3 +397,5 @@ npm run build
 ### Tech Debt
 
 - **Rules 检测模式需持续迭代**：P3 上线后 5 维规则检测器（困惑度、突发性、连接词、认知特征、语义指纹）需要持续优化准确率，不能视为已完成模块。架构上保持检测器可插拔以便独立优化。
+- **待支付订单过期**：当前 pending 订单无自动关闭机制，需加定时任务（如 30 分钟未支付自动关闭）
+- **DOCX 下载/报告导出**：P3 前端尚缺 DOCX 格式下载和改写报告生成功能
