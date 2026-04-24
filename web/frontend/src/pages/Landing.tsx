@@ -14,8 +14,10 @@ import {
   LoginOutlined,
   RightOutlined,
   BulbOutlined,
+  ArrowRightOutlined,
 } from "@ant-design/icons";
 import { useThemeStore } from "../stores/theme";
+import { useAuthStore } from "../stores/auth";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -89,6 +91,7 @@ const features = [
 export default function Landing() {
   const navigate = useNavigate();
   const { isDark, toggle } = useThemeStore();
+  const { user } = useAuthStore();
   const C = isDark ? darkColors : lightColors;
 
   return (
@@ -112,7 +115,9 @@ export default function Landing() {
             color: C.textPrimary,
             fontFamily: "system-ui, -apple-system, sans-serif",
             letterSpacing: "-0.5px",
+            cursor: "pointer",
           }}
+          onClick={() => navigate("/")}
         >
           AIGC<span style={{ color: C.accent }}>Reducer</span>
         </Text>
@@ -125,8 +130,8 @@ export default function Landing() {
           />
           <Button
             type="primary"
-            icon={<LoginOutlined />}
-            onClick={() => navigate("/login")}
+            icon={user ? <ArrowRightOutlined /> : <LoginOutlined />}
+            onClick={() => navigate(user ? "/dashboard" : "/login")}
             style={{
               background: C.btnBg,
               borderColor: C.btnBg,
@@ -136,7 +141,7 @@ export default function Landing() {
               borderRadius: 6,
             }}
           >
-            登录 / 注册
+            {user ? "进入系统" : "登录 / 注册"}
           </Button>
         </div>
       </nav>
@@ -188,8 +193,8 @@ export default function Landing() {
             <Button
               type="primary"
               size="large"
-              icon={<LoginOutlined />}
-              onClick={() => navigate("/login")}
+              icon={user ? <ArrowRightOutlined /> : <LoginOutlined />}
+              onClick={() => navigate(user ? "/dashboard" : "/login")}
               style={{
                 height: 50,
                 paddingInline: 40,
@@ -201,7 +206,7 @@ export default function Landing() {
                 borderRadius: 6,
               }}
             >
-              立即使用
+              {user ? "进入系统" : "立即使用"}
             </Button>
             <Button
               size="large"
@@ -419,7 +424,7 @@ export default function Landing() {
             type="primary"
             size="large"
             icon={<RightOutlined />}
-            onClick={() => navigate("/login")}
+            onClick={() => navigate(user ? "/credits" : "/login")}
             style={{
               background: C.accent,
               borderColor: C.accent,

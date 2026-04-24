@@ -1,7 +1,7 @@
 // web/frontend/src/pages/Login.tsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { App as AntApp, Button, Card, Form, Input, Typography, theme } from "antd";
+import { App as AntApp, Button, Card, Form, Input, Spin, Typography, theme } from "antd";
 import { MobileOutlined, SafetyOutlined, BulbOutlined, LeftOutlined } from "@ant-design/icons";
 import { useAuthStore } from "../stores/auth";
 import { useThemeStore } from "../stores/theme";
@@ -12,11 +12,39 @@ export default function Login() {
   const [form] = Form.useForm();
   const [sending, setSending] = useState(false);
   const [countdown, setCountdown] = useState(0);
-  const { login, sendSms, loading } = useAuthStore();
+  const [checking, setChecking] = useState(true);
+  const { login, sendSms, loading, user, fetchUser } = useAuthStore();
   const navigate = useNavigate();
   const { token } = theme.useToken();
   const { isDark, toggle } = useThemeStore();
   const { message } = AntApp.useApp();
+
+  // 已登录自动跳转
+  useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    if (token && user) {
+      navigate("/dashboard", { replace: true });
+    } else if (token) {
+      fetchUser().then(() => setChecking(false));
+    } else {
+      setChecking(false);
+    }
+  }, []);
+
+  // fetchUser 完成后 user 变化，再跳转
+  useEffect(() => {
+    if (user) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [user]);
+
+  if (checking) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   const handleSendCode = async () => {
     try {
@@ -99,7 +127,7 @@ export default function Login() {
         }}
       />
       <Card style={{ width: 400, maxWidth: "90vw" }}>
-        <Title level={3} style={{ textAlign: "center", marginBottom: 32 }}>
+        <Title level={3} style={{ textAlign: "center", marginBottom: 32, cursor: "pointer" }} onClick={() => navigate("/")}>
           AIGC<span style={{ color: token.colorPrimary }}>Reducer</span>
         </Title>
         <Form form={form} onFinish={handleLogin} size="large">

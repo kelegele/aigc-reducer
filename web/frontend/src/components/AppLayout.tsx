@@ -97,7 +97,7 @@ export default function AppLayout() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-          <Text strong style={{ fontSize: 18, whiteSpace: "nowrap" }}>
+          <Text strong style={{ fontSize: 18, whiteSpace: "nowrap", cursor: "pointer" }} onClick={() => navigate("/")}>
             AIGC<span style={{ color: themeToken.colorPrimary }}>Reducer</span>
           </Text>
           <Menu
