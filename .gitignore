@@ -1,1 +1,8 @@
 .superpowers/
+__pycache__/
+*.egg-info/
+build/
+dist/
+cli/output/
+cli/raw-paper/
+.DS_Store
