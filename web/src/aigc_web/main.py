@@ -30,9 +30,23 @@ def _close_expired_orders_job() -> None:
         db.close()
 
 
+def _load_config_on_startup() -> None:
+    """启动时从 DB 加载系统配置到内存 settings。"""
+    from aigc_web.services import admin as admin_service
+    db = SessionLocal()
+    try:
+        admin_service.load_config_from_db(db, settings)
+        logger.info("System config loaded from DB")
+    except Exception:
+        logger.warning("Failed to load config from DB, using defaults", exc_info=True)
+    finally:
+        db.close()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 启动：注册定时任务
+    # 启动：加载 DB 配置 + 注册定时任务
+    _load_config_on_startup()
     scheduler = BackgroundScheduler()
     scheduler.add_job(_close_expired_orders_job, "interval", seconds=60)
     scheduler.start()

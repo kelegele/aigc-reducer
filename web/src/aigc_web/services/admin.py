@@ -10,6 +10,7 @@ from aigc_web.models.credit_account import CreditAccount
 from aigc_web.models.credit_transaction import CreditTransaction
 from aigc_web.models.payment_order import PaymentOrder
 from aigc_web.models.recharge_package import RechargePackage
+from aigc_web.models.system_config import SystemConfig
 from aigc_web.models.user import User
 from aigc_web.schemas.admin import PackageCreateRequest, PackageUpdateRequest
 from aigc_web.services import credit as credit_service
@@ -184,19 +185,59 @@ def get_dashboard(db: Session) -> dict:
 
 # --- 配置 ---
 
-def get_config() -> dict:
+# DB key → (settings 属性名, 类型转换函数)
+_CONFIG_MAP = {
+    "credits_per_token": ("CREDITS_PER_TOKEN", float),
+    "new_user_bonus_credits": ("NEW_USER_BONUS_CREDITS", int),
+}
+
+
+def get_config(db: Session) -> dict:
+    """从 DB 读取配置，DB 无值时回退到 settings 默认值。"""
     from aigc_web.config import settings
-    return {
-        "credits_per_token": settings.CREDITS_PER_TOKEN,
-        "new_user_bonus_credits": settings.NEW_USER_BONUS_CREDITS,
-    }
+    rows = {r.key: r.value for r in db.query(SystemConfig).all()}
+    result = {}
+    for key, (attr, cast) in _CONFIG_MAP.items():
+        if key in rows:
+            result[key] = cast(rows[key])
+        else:
+            result[key] = getattr(settings, attr)
+    return result
 
 
-def update_config(settings_obj, credits_per_token: float | None = None, new_user_bonus_credits: int | None = None) -> None:
+def update_config(
+    db: Session,
+    settings_obj,
+    credits_per_token: float | None = None,
+    new_user_bonus_credits: int | None = None,
+) -> None:
+    """写入 DB 并同步更新内存 settings。"""
+    updates = {}
     if credits_per_token is not None:
-        settings_obj.CREDITS_PER_TOKEN = credits_per_token
+        updates["credits_per_token"] = (str(credits_per_token), credits_per_token)
     if new_user_bonus_credits is not None:
-        settings_obj.NEW_USER_BONUS_CREDITS = new_user_bonus_credits
+        updates["new_user_bonus_credits"] = (str(new_user_bonus_credits), new_user_bonus_credits)
+
+    for key, (str_val, _) in updates.items():
+        row = db.query(SystemConfig).filter_by(key=key).first()
+        if row:
+            row.value = str_val
+        else:
+            db.add(SystemConfig(key=key, value=str_val))
+    db.commit()
+
+    # 同步更新内存
+    for key, (_, typed_val) in updates.items():
+        attr = _CONFIG_MAP[key][0]
+        setattr(settings_obj, attr, typed_val)
+
+
+def load_config_from_db(db: Session, settings_obj) -> None:
+    """启动时从 DB 加载配置到内存 settings。"""
+    rows = {r.key: r.value for r in db.query(SystemConfig).all()}
+    for key, (attr, cast) in _CONFIG_MAP.items():
+        if key in rows:
+            setattr(settings_obj, attr, cast(rows[key]))
 
 
 # --- 流水管理 ---

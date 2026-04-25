@@ -7,6 +7,8 @@ services:
       POSTGRES_USER: aigc
       POSTGRES_PASSWORD: ${DB_PASSWORD:-aigc123}
       POSTGRES_DB: aigc_reducer
+    ports:
+      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:

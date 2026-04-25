@@ -157,21 +157,24 @@ def set_user_status(
 @router.get("/config", response_model=ConfigResponse)
 def get_config(
     _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
 ):
-    return admin_service.get_config()
+    return admin_service.get_config(db)
 
 
 @router.put("/config", response_model=ConfigResponse)
 def update_config(
     req: ConfigUpdateRequest,
     _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
 ):
     admin_service.update_config(
+        db,
         settings,
         credits_per_token=req.credits_per_token,
         new_user_bonus_credits=req.new_user_bonus_credits,
     )
-    return admin_service.get_config()
+    return admin_service.get_config(db)
 
 
 # --- 流水管理 ---
