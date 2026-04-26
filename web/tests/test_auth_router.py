@@ -7,6 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from aigc_web.config import settings
 from aigc_web.database import Base, get_db
 from aigc_web.dependencies import get_verification_service, set_verification_service
 from aigc_web.main import app
@@ -33,6 +34,9 @@ def client():
     app.dependency_overrides[get_db] = override_get_db
 
     with TestClient(app) as c:
+        # lifespan 会从 PostgreSQL 加载配置到 settings，覆盖测试默认值
+        settings.NEW_USER_BONUS_CREDITS = 0
+        settings.CREDITS_PER_1K_TOKENS = 1.0
         yield c
 
     app.dependency_overrides.clear()
