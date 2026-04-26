@@ -171,7 +171,7 @@ def update_config(
     admin_service.update_config(
         db,
         settings,
-        credits_per_token=req.credits_per_token,
+        credits_per_1k_tokens=req.credits_per_1k_tokens,
         new_user_bonus_credits=req.new_user_bonus_credits,
     )
     return admin_service.get_config(db)

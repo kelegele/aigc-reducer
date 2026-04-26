@@ -170,16 +170,16 @@ def test_get_config(client):
 
     resp = client.get("/api/admin/config", headers=headers)
     assert resp.status_code == 200
-    assert "credits_per_token" in resp.json()
+    assert "credits_per_1k_tokens" in resp.json()
 
 
 def test_update_config(client):
     token, _ = _create_admin()
     headers = {"Authorization": f"Bearer {token}"}
 
-    resp = client.put("/api/admin/config", json={"credits_per_token": 2.0}, headers=headers)
+    resp = client.put("/api/admin/config", json={"credits_per_1k_tokens": 2.0}, headers=headers)
     assert resp.status_code == 200
-    assert resp.json()["credits_per_token"] == 2.0
+    assert resp.json()["credits_per_1k_tokens"] == 2.0
 
     # Restore
-    client.put("/api/admin/config", json={"credits_per_token": 1.0}, headers=headers)
+    client.put("/api/admin/config", json={"credits_per_1k_tokens": 1.0}, headers=headers)

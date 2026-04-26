@@ -297,6 +297,26 @@ op.create_unique_constraint(None, 'table', ['col'])
 
 **原因**：P2 测试时创建了一条 pending 订单关联了套餐#1，导致套餐无法删除。实际上 pending 订单对业务无意义，不应阻止套餐下架或删除。
 
+### 运行时可配置项必须持久化到数据库
+
+管理后台可修改的系统配置（如 `CREDITS_PER_1K_TOKENS`、`NEW_USER_BONUS_CREDITS`）**必须**存入 `system_config` KV 表，不能只依赖内存 `settings`。实现模式：
+
+1. `admin_service.update_config()` — 写入 DB + 同步内存 `settings`
+2. `main.py` lifespan 启动时调用 `load_config_from_db()` — DB → 内存
+3. DB 无值时回退到 `.env` / 代码默认值
+
+```python
+# _CONFIG_MAP 定义 DB key → (settings 属性名, 类型转换函数)
+_CONFIG_MAP = {
+    "credits_per_1k_tokens": ("CREDITS_PER_1K_TOKENS", float),
+    "new_user_bonus_credits": ("NEW_USER_BONUS_CREDITS", int),
+}
+```
+
+新增可配置项时，只需在 `_CONFIG_MAP` 注册即可，无需改动加载/更新逻辑。
+
+**原因**：`CREDITS_PER_1K_TOKENS` 只存在内存 settings 中，运行时通过后台修改生效，但重启后恢复默认值 1.0，导致积分计费不一致。
+
 ### 测试环境隔离
 
 `conftest.py` 已有 `autouse` fixture 确保 `DEV_BYPASS_PHONE=False` 和 `DEV_TEST_PHONES=""`。新增涉及 dev-only 逻辑（如短信 bypass、权限提升）的代码时，**必须**在 `conftest.py` 同步 patch，防止 `.env` 开发配置干扰测试。
@@ -349,7 +369,7 @@ FastAPI 分层架构：`routers/` → `dependencies.py` → `services/` → `mod
 - **config.py** — pydantic-settings，从 `.env` 读取配置
 - **database.py** — SQLAlchemy Base、engine、get_db
 - **dependencies.py** — FastAPI 依赖注入（JWT 认证、SMS 服务）
-- **models/** — User、CreditAccount、RechargePackage、PaymentOrder、CreditTransaction、ReductionTask、ReductionParagraph ORM 模型
+- **models/** — User、CreditAccount、RechargePackage、PaymentOrder、CreditTransaction、ReductionTask、ReductionParagraph、SystemConfig ORM 模型
 - **schemas/** — Pydantic 请求/响应模型：auth.py、credits.py、admin.py、reduce.py
 - **services/** — 业务逻辑：token.py（JWT）、sms.py（验证码）、auth.py（登录注册）、credit.py（积分充值/消费/流水）、payment.py（支付抽象层 + 支付宝 + 订单管理）、admin.py（管理后台）、reduce.py（P3 检测/改写，SSE 流式推送）
 - **routers/** — API 路由：auth.py（/api/auth/*）、credits.py（/api/credits/*）、admin.py（/api/admin/*）、reduce.py（/api/reduce/*）
@@ -426,7 +446,7 @@ npm run build
 
 **积分计费**：
 - Rules 检测：免费
-- LLM 检测 / 全量重构 / 改写：按 token × `CREDITS_PER_TOKEN` 扣减，操作前预检余额
+- LLM 检测 / 全量重构 / 改写：按 token × `CREDITS_PER_1K_TOKENS` 扣减，操作前预检余额
 
 **关键实现**：`ReduceService` 中所有 LLM 调用通过 `asyncio.to_thread()` 将同步 core 代码桥接到 FastAPI 异步事件循环。
 
@@ -436,7 +456,7 @@ npm run build
 
 - **支付渠道**：`PaymentProvider` 抽象层，`AlipayProvider`（生产）/ `MockPaymentProvider`（开发，ALIPAY_APP_ID 为空时自动启用）
 - **支付确认**：主动查询（`query_trade`）为主，异步回调为辅。前端双重机制：新 tab 支付 + 弹窗轮询 + return URL 回跳检测
-- **积分消费**：按 token × `CREDITS_PER_TOKEN` 扣减，余额不足抛 403
+- **积分消费**：按 token × `CREDITS_PER_1K_TOKENS` 扣减，余额不足抛 403。`CREDITS_PER_1K_TOKENS` 存储在 `system_config` 表中，管理后台可动态调整，重启后自动从 DB 加载
 - **新人赠送**：`NEW_USER_BONUS_CREDITS` 配置，注册时自动发放
 - **幂等**：支付回调先查订单状态，已 paid 不重复加积分
 
@@ -453,3 +473,4 @@ npm run build
 - **Rules 检测模式需持续迭代**：P3 上线后 5 维规则检测器（困惑度、突发性、连接词、认知特征、语义指纹）需要持续优化准确率，不能视为已完成模块。架构上保持检测器可插拔以便独立优化。
 - **待支付订单过期**：当前 pending 订单无自动关闭机制，需加定时任务（如 30 分钟未支付自动关闭）
 - **DOCX 下载/报告导出**：P3 前端尚缺 DOCX 格式下载和改写报告生成功能
+- **CREDITS_PER_1K_TOKENS 定价校准**：当前默认值 1.0 导致所有套餐亏损（Kimi-K2.6 输出 ¥27/M tokens，混合成本约 ¥0.029/credit）。需根据实际 LLM 成本调整为 3.0–4.0，已在管理后台配置

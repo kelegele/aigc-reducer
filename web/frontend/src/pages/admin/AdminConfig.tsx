@@ -35,7 +35,7 @@ export default function AdminConfig() {
       <Title level={4}>积分配置</Title>
       <Card style={{ maxWidth: 500 }}>
         <Form form={form} layout="vertical">
-          <Form.Item name="credits_per_token" label="每 1000 Token 积分价格" rules={[{ required: true }]}>
+          <Form.Item name="credits_per_1k_tokens" label="每 1000 Token 积分价格" rules={[{ required: true }]}>
             <InputNumber min={0.01} step={0.1} style={{ width: "100%" }} />
           </Form.Item>
           <Form.Item name="new_user_bonus_credits" label="新人赠送积分" rules={[{ required: true }]}>

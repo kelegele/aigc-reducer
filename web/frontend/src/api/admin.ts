@@ -70,7 +70,7 @@ export interface DashboardResponse {
 }
 
 export interface ConfigResponse {
-  credits_per_token: number;
+  credits_per_1k_tokens: number;
   new_user_bonus_credits: number;
 }
 
@@ -129,7 +129,7 @@ export async function getConfig(): Promise<ConfigResponse> {
 }
 
 export async function updateConfig(req: {
-  credits_per_token?: number;
+  credits_per_1k_tokens?: number;
   new_user_bonus_credits?: number;
 }): Promise<ConfigResponse> {
   const resp = await client.put<ConfigResponse>("/admin/config", req);

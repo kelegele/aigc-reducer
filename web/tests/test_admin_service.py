@@ -186,38 +186,38 @@ def test_get_dashboard(db_session):
 def test_get_config_default(db_session):
     """DB 无配置时，回退到 settings 默认值。"""
     from aigc_web import config
-    orig_cpt = config.settings.CREDITS_PER_TOKEN
+    orig_cpt = config.settings.CREDITS_PER_1K_TOKENS
     orig_bonus = config.settings.NEW_USER_BONUS_CREDITS
     try:
-        config.settings.CREDITS_PER_TOKEN = 1.0
+        config.settings.CREDITS_PER_1K_TOKENS = 1.0
         config.settings.NEW_USER_BONUS_CREDITS = 0
         result = admin_service.get_config(db_session)
-        assert result["credits_per_token"] == 1.0
+        assert result["credits_per_1k_tokens"] == 1.0
         assert result["new_user_bonus_credits"] == 0
     finally:
-        config.settings.CREDITS_PER_TOKEN = orig_cpt
+        config.settings.CREDITS_PER_1K_TOKENS = orig_cpt
         config.settings.NEW_USER_BONUS_CREDITS = orig_bonus
 
 
 def test_update_config_persists_to_db(db_session):
     """update_config 写入 DB，重启后仍然可读。"""
     from aigc_web import config
-    orig_cpt = config.settings.CREDITS_PER_TOKEN
+    orig_cpt = config.settings.CREDITS_PER_1K_TOKENS
     orig_bonus = config.settings.NEW_USER_BONUS_CREDITS
     try:
-        admin_service.update_config(db_session, config.settings, credits_per_token=5.0, new_user_bonus_credits=200)
+        admin_service.update_config(db_session, config.settings, credits_per_1k_tokens=5.0, new_user_bonus_credits=200)
         # 内存立即更新
-        assert config.settings.CREDITS_PER_TOKEN == 5.0
+        assert config.settings.CREDITS_PER_1K_TOKENS == 5.0
         assert config.settings.NEW_USER_BONUS_CREDITS == 200
 
         # 模拟重启：还原内存为默认值，再从 DB 加载
-        config.settings.CREDITS_PER_TOKEN = 1.0
+        config.settings.CREDITS_PER_1K_TOKENS = 1.0
         config.settings.NEW_USER_BONUS_CREDITS = 0
         admin_service.load_config_from_db(db_session, config.settings)
-        assert config.settings.CREDITS_PER_TOKEN == 5.0
+        assert config.settings.CREDITS_PER_1K_TOKENS == 5.0
         assert config.settings.NEW_USER_BONUS_CREDITS == 200
     finally:
-        config.settings.CREDITS_PER_TOKEN = orig_cpt
+        config.settings.CREDITS_PER_1K_TOKENS = orig_cpt
         config.settings.NEW_USER_BONUS_CREDITS = orig_bonus
 
 
@@ -225,12 +225,12 @@ def test_get_config_reads_from_db(db_session):
     """get_config 优先从 DB 读取。"""
     from aigc_web import config
     from aigc_web.models.system_config import SystemConfig
-    orig_cpt = config.settings.CREDITS_PER_TOKEN
+    orig_cpt = config.settings.CREDITS_PER_1K_TOKENS
     try:
         # 直接往 DB 写一条
-        db_session.add(SystemConfig(key="credits_per_token", value="3.14"))
+        db_session.add(SystemConfig(key="credits_per_1k_tokens", value="3.14"))
         db_session.commit()
         result = admin_service.get_config(db_session)
-        assert result["credits_per_token"] == 3.14
+        assert result["credits_per_1k_tokens"] == 3.14
     finally:
-        config.settings.CREDITS_PER_TOKEN = orig_cpt
+        config.settings.CREDITS_PER_1K_TOKENS = orig_cpt

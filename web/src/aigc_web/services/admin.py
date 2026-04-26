@@ -187,7 +187,7 @@ def get_dashboard(db: Session) -> dict:
 
 # DB key → (settings 属性名, 类型转换函数)
 _CONFIG_MAP = {
-    "credits_per_token": ("CREDITS_PER_TOKEN", float),
+    "credits_per_1k_tokens": ("CREDITS_PER_1K_TOKENS", float),
     "new_user_bonus_credits": ("NEW_USER_BONUS_CREDITS", int),
 }
 
@@ -208,13 +208,13 @@ def get_config(db: Session) -> dict:
 def update_config(
     db: Session,
     settings_obj,
-    credits_per_token: float | None = None,
+    credits_per_1k_tokens: float | None = None,
     new_user_bonus_credits: int | None = None,
 ) -> None:
     """写入 DB 并同步更新内存 settings。"""
     updates = {}
-    if credits_per_token is not None:
-        updates["credits_per_token"] = (str(credits_per_token), credits_per_token)
+    if credits_per_1k_tokens is not None:
+        updates["credits_per_1k_tokens"] = (str(credits_per_1k_tokens), credits_per_1k_tokens)
     if new_user_bonus_credits is not None:
         updates["new_user_bonus_credits"] = (str(new_user_bonus_credits), new_user_bonus_credits)
 

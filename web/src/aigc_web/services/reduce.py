@@ -526,7 +526,7 @@ class ReduceService:
 
     @staticmethod
     def _tokens_to_credits(token_count: int) -> int:
-        return max(1, int(token_count / 1000 * settings.CREDITS_PER_TOKEN))
+        return max(1, int(token_count / 1000 * settings.CREDITS_PER_1K_TOKENS))
 
 
 def _parse_document_sync(file_path: str) -> list[Paragraph]:

@@ -92,12 +92,12 @@ class DashboardResponse(BaseModel):
 # --- 配置 ---
 
 class ConfigResponse(BaseModel):
-    credits_per_token: float
+    credits_per_1k_tokens: float
     new_user_bonus_credits: int
 
 
 class ConfigUpdateRequest(BaseModel):
-    credits_per_token: float | None = None
+    credits_per_1k_tokens: float | None = None
     new_user_bonus_credits: int | None = None
 
 

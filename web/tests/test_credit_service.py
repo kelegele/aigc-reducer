@@ -57,8 +57,8 @@ def test_recharge_multiple(db_session):
 def test_consume(db_session):
     user = _create_user(db_session)
     credit_service.recharge(db_session, user.id, 100, "payment_order", 1, "充值")
-    # consume 的第二个参数是 token_count，cost = max(1, int(token_count/1000 * CREDITS_PER_TOKEN))
-    # 默认 CREDITS_PER_TOKEN=1.0，token_count=30000 → cost=30
+    # consume 的第二个参数是 token_count，cost = max(1, int(token_count/1000 * CREDITS_PER_1K_TOKENS))
+    # 默认 CREDITS_PER_1K_TOKENS=1.0，token_count=30000 → cost=30
     credit_service.consume(db_session, user.id, 30000, "detection_task", 10, "检测扣费")
 
     account = db_session.query(CreditAccount).filter_by(user_id=user.id).one()
