@@ -417,7 +417,7 @@ export default function Landing() {
               按需付费，用多少扣多少
             </Title>
             <Paragraph style={{ color: C.textSecondary, marginBottom: 0, lineHeight: 1.65 }}>
-              积分按 Token 消耗，支持支付宝在线支付。从体验包到专业包，满足不同论文需求。
+              积分按实际处理文字量扣减，支持支付宝在线支付。从体验包到论文季卡，满足不同论文需求。
             </Paragraph>
           </div>
           <Button

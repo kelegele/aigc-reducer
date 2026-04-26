@@ -10,7 +10,6 @@ class ParagraphChoiceRequest(BaseModel):
 
 
 class CreditsEstimateResponse(BaseModel):
-    estimated_tokens: int
     estimated_credits: int
     current_balance: int
     sufficient: bool
@@ -41,7 +40,6 @@ class TaskResponse(BaseModel):
     detect_mode: str
     style: str
     full_reconstruct: bool
-    total_tokens: int
     total_credits: int
     original_text: str
     reduced_text: str | None = None

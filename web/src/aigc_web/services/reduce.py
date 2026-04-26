@@ -493,7 +493,6 @@ class ReduceService:
         balance = credit_service.get_balance(self.db, task.user_id)
 
         return {
-            "estimated_tokens": est,
             "estimated_credits": cost,
             "current_balance": balance,
             "sufficient": balance >= cost,

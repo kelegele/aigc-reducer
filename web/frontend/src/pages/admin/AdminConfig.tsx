@@ -21,7 +21,7 @@ export default function AdminConfig() {
     try {
       const updated = await updateConfig(values);
       form.setFieldsValue(updated);
-      message.success("配置已更新（运行时生效，重启后恢复默认）");
+      message.success("配置已更新");
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
       if (detail) message.error(detail);

@@ -192,6 +192,22 @@ cd web && uv sync --reinstall-package aigc-reducer-core
 
 ## Frontend Coding Rules
 
+### Token 与积分汇率是绝密信息
+
+`CREDITS_PER_1K_TOKENS`（CPT）是核心商业机密，**绝对不能**暴露给普通用户。违反此规则等同于泄露定价策略。
+
+**禁止向前端/用户暴露的内容**：
+- `total_tokens`、`estimated_tokens` 等 token 数量字段
+- `credits_per_1k_tokens` 配置值
+- 任何包含"Token"、"1000 Token"等字样的文案
+- 积分单价（¥/积分）、积分汇率计算过程
+
+**所有用量展示统一用积分**：API 响应、前端页面、SSE 事件中，只展示积分消耗（`total_credits`、`estimated_credits`），不展示 token 数量。
+
+**管理后台例外**：`/api/admin/*` 路由和 admin 页面可以查看和修改 CPT 配置，因为只有管理员可访问。
+
+**原因**：Token 与积分的汇率是定价核心，一旦暴露用户可以反算出每篇论文的真实成本，丧失定价灵活性和利润空间。
+
 ### 错误处理规范
 
 所有涉及 API 调用的用户操作（按钮点击、表单提交）**必须**使用 try-catch，并在 catch 中提取后端 `response.data.detail` 展示给用户。禁止使用泛泛的默认错误信息。

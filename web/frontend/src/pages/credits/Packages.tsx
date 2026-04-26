@@ -134,13 +134,15 @@ export default function Packages() {
         showIcon
         icon={<InfoCircleOutlined />}
         message="积分用途说明"
-        description="积分用于文档检测和 AI 改写。系统按实际消耗的 Token 数量扣减积分（每 1000 Token 消耗一定积分，具体价格请参见套餐详情）。"
+        description="积分用于文档 AI 检测和改写。系统按实际处理的文字量扣减积分，详见各套餐说明。"
         style={{ marginBottom: 16 }}
       />
 
       <Row gutter={[16, 16]}>
         {packages.map((pkg) => {
-          const pricePerCredit = pkg.price_cents / (pkg.credits + pkg.bonus_credits);
+          const totalCredits = pkg.credits + pkg.bonus_credits;
+          // 完整流程(1万字)消耗 1000 积分，每 1000 积分 ≈ 10000 中文字
+          const estChars = Math.round((totalCredits / 1000) * 10000);
           const scene = packageScenes[pkg.name] || "通用套餐";
 
           return (
@@ -155,20 +157,20 @@ export default function Packages() {
                   </Tag>
                   <div style={{ margin: "16px 0" }}>
                     <Text style={{ fontSize: 32, fontWeight: "bold" }}>
-                      ¥{(pkg.price_cents / 100).toFixed(0)}
+                      ¥{(pkg.price_cents / 100).toFixed(2)}
                     </Text>
                   </div>
                   <div style={{ marginBottom: 8 }}>
-                    <Text>{pkg.credits} 积分</Text>
+                    <Text>{totalCredits} 积分</Text>
                     {pkg.bonus_credits > 0 && (
                       <Tag color="red" style={{ marginLeft: 8 }}>
-                        赠送 {pkg.bonus_credits}
+                        含赠送 {pkg.bonus_credits}
                       </Tag>
                     )}
                   </div>
                   <div style={{ marginBottom: 12 }}>
                     <Text type="secondary" style={{ fontSize: 12 }}>
-                      约 ¥{(pricePerCredit / 100).toFixed(3)}/积分
+                      可检测 ~{estChars.toLocaleString()} 中文字
                     </Text>
                   </div>
                 </div>

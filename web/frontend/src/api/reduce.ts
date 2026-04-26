@@ -26,7 +26,6 @@ export interface TaskResponse {
   detect_mode: string;
   style: string;
   full_reconstruct: boolean;
-  total_tokens: number;
   total_credits: number;
   original_text: string;
   reduced_text: string | null;
@@ -54,7 +53,6 @@ export interface TaskListResponse {
 }
 
 export interface CreditsEstimateResponse {
-  estimated_tokens: number;
   estimated_credits: number;
   current_balance: number;
   sufficient: boolean;

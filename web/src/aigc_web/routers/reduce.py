@@ -215,7 +215,6 @@ def _task_to_response(task: ReductionTask) -> dict:
         "detect_mode": task.detect_mode,
         "style": task.style,
         "full_reconstruct": task.full_reconstruct,
-        "total_tokens": task.total_tokens,
         "total_credits": task.total_credits,
         "original_text": task.original_text,
         "reduced_text": task.reduced_text,
