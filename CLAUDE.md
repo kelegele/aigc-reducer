@@ -6,6 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 AIGC Reducer — 降低学术论文 AIGC 查重率的 CLI 工具 + Web 服务。通过检测 AI 写作特征并提供多种改写风格，降低知网、GoCheck 等平台的 AI 查重率。
 
+## gstack
+
+- 所有网页浏览必须使用 `/browse` skill（来自 gstack），**禁止使用 `mcp__claude-in-chrome__*` 工具**
+- 可用 skills：`/browse`、`/qa`、`/qa-only`、`/design-review`、`/connect-chrome`、`/setup-browser-cookies`
+
 ## Monorepo Structure
 
 - `core/` — 共享检测/改写引擎（`aigc-reducer-core` 包），CLI 和 Web 均依赖此包

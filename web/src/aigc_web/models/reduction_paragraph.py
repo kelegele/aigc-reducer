@@ -20,7 +20,7 @@ class ReductionParagraph(Base):
     has_formula: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     has_code: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     detection_result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    risk_level: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    risk_level: Mapped[str | None] = mapped_column(String(20), nullable=True)
     needs_processing: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     rewrite_aggressive: Mapped[str | None] = mapped_column(Text, nullable=True)
     rewrite_conservative: Mapped[str | None] = mapped_column(Text, nullable=True)

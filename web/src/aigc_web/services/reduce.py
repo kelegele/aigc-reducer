@@ -203,8 +203,15 @@ class ReduceService:
             task.total_tokens += est
             task.total_credits += cost
 
-        task.status = "detected"
-        self.db.commit()
+        try:
+            task.status = "detected"
+            self.db.commit()
+        except Exception as e:
+            self.db.rollback()
+            task.status = "failed"
+            self.db.commit()
+            yield {"type": "error", "message": f"保存检测结果失败: {e}"}
+            return
 
         yield {
             "type": "complete",
