@@ -103,6 +103,9 @@ export default function TaskWorkspace() {
   const [rewriteProgress, setRewriteProgress] = useState(0);
   const [rewriteCurrent, setRewriteCurrent] = useState(0);
   const [rewriteTotal, setRewriteTotal] = useState(0);
+  const [reconProgress, setReconProgress] = useState(0);
+  const [reconCurrent, setReconCurrent] = useState(0);
+  const [reconTotal, setReconTotal] = useState(0);
   const [viewMode, setViewMode] = useState<"wizard" | "list">("list");
   const [wizardIndex, setWizardIndex] = useState(0);
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set());
@@ -314,28 +317,41 @@ export default function TaskWorkspace() {
   const startReconstruct = useCallback(() => {
     setReconstructing(true);
     setCurrentStep(2);
+    setActivityLog([]);
+    appendLog("开始全量语义重构…");
     const ctrl = connectSSE(
       `/api/reduce/tasks/${taskId}/reconstruct`,
       async (data) => {
-        if (data.type === "complete") {
+        if (data.type === "progress") {
+          const current = Number(data.current ?? 0);
+          const total = Number(data.total ?? 0);
+          const idx = Number(data.index ?? 0);
+          setReconProgress(Math.round((current / total) * 100));
+          setReconCurrent(current);
+          setReconTotal(total);
+          appendLog(`第 ${idx + 1} 段重构完成 (${current}/${total})`);
+        } else if (data.type === "complete") {
           ctrl.abort();
           setSseController(null);
           setReconstructing(false);
+          setReconProgress(100);
+          appendLog(`重构完成，消耗积分 ${data.credits_used ?? 0}`);
           const t = await getTask(taskId);
           setTask(t);
-          // 重构后后端状态不变（仍为 detected），直接前进到改写步骤
           setCurrentStep(1);
           message.success(`重构完成，消耗积分 ${data.credits_used ?? 0}`);
         } else if (data.type === "error") {
           ctrl.abort();
           setSseController(null);
           setReconstructing(false);
+          appendLog(`重构出错：${data.message ?? "未知错误"}`);
           message.error(String(data.message ?? "重构失败"));
         }
       },
       (error) => {
         setSseController(null);
         setReconstructing(false);
+        appendLog(`重构连接失败：${error}`);
         message.error(error || "重构连接失败");
       },
     );
@@ -727,12 +743,45 @@ export default function TaskWorkspace() {
   );
 
   const renderReconstructStep = () => (
-    <div style={{ textAlign: "center", padding: "60px 0" }}>
-      <Spin size="large" spinning={reconstructing} tip="正在进行全量语义重构...">
-        <div style={{ minHeight: 80 }} />
-      </Spin>
+    <div>
+      {reconstructing && (
+        <Card style={{ marginBottom: 16, textAlign: "center", padding: 24 }}>
+          <Progress
+            percent={reconProgress}
+            status={reconProgress < 100 ? "active" : "success"}
+            style={{ maxWidth: 400, margin: "0 auto 12px" }}
+          />
+          <Text type="secondary">
+            正在重构 {reconCurrent}/{reconTotal} 段...
+          </Text>
+          {activityLog.length > 0 && (
+            <div
+              className="activity-log"
+              style={{
+                marginTop: 16,
+                textAlign: "left",
+                maxHeight: 240,
+                overflow: "auto",
+                padding: "8px 12px",
+                background: themeToken.colorBgLayout,
+                borderRadius: 6,
+                fontSize: 12,
+                lineHeight: 1.8,
+                fontFamily: "monospace",
+                color: themeToken.colorTextSecondary,
+              }}
+            >
+              {activityLog.map((line, i) => (
+                <div key={i}>{line}</div>
+              ))}
+              <div ref={logEndRef} />
+            </div>
+          )}
+        </Card>
+      )}
+
       {!reconstructing && task.full_reconstruct && (
-        <div>
+        <div style={{ textAlign: "center", padding: "40px 0" }}>
           <CheckCircleOutlined
             style={{ fontSize: 48, color: themeToken.colorSuccess, marginBottom: 16 }}
           />

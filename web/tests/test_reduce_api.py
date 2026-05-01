@@ -335,7 +335,6 @@ def test_estimate_credits(client):
     )
     assert resp.status_code == 200
     data = resp.json()
-    assert "estimated_tokens" in data
     assert "estimated_credits" in data
     assert "current_balance" in data
     assert "sufficient" in data

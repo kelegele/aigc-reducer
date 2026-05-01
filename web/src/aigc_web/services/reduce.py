@@ -248,7 +248,7 @@ class ReduceService:
     # ── 全量语义重构（SSE） ──
 
     async def start_reconstruction(self, task_id: str) -> AsyncGenerator[dict, None]:
-        """全量语义重构（可选步骤）。"""
+        """全量语义重构——逐段重构并推送进度。"""
         task = self._get_task(task_id)
         if task.status != "detected":
             logger.warning("[reconstruct] task=%s invalid status=%s", task_id[:8], task.status)
@@ -259,10 +259,14 @@ class ReduceService:
         t0 = time.time()
 
         paragraphs = self._get_paragraphs(task_id)
-        full_text = "\n\n".join(p.original_text for p in paragraphs)
+        body_paragraphs = [p for p in paragraphs if not p.is_heading]
+        if not body_paragraphs:
+            yield {"type": "error", "message": "没有可重构的段落"}
+            return
 
         # 预检积分
-        est = max(1, int(len(full_text) * 1.5))
+        total_chars = sum(len(p.original_text) for p in body_paragraphs)
+        est = max(1, int(total_chars * 1.5))
         cost = self._tokens_to_credits(est)
         balance = credit_service.get_balance(self.db, task.user_id)
         if balance < cost:
@@ -273,55 +277,80 @@ class ReduceService:
             }
             return
 
-        # 用 Rewriter 的风格做全量重构
         cancel_event = threading.Event()
         rewriter = Rewriter(
             task.style,
             llm_client=self._llm_client,
             cancel_event=cancel_event,
         )
+        task.full_reconstruct = True
 
-        try:
-            rewritten = await asyncio.to_thread(
-                rewriter.rewrite_single,
-                full_text,
-                {"composite_score": 50},
-                conservative=False,
-            )
-        except CancelledError:
-            logger.info("[reconstruct] task=%s cancelled", task_id[:8])
-            yield {"type": "error", "message": "重构已取消"}
-            return
-        except Exception as e:
+        total_est = 0
+        total_cost = 0
+        done = 0
+        total = len(body_paragraphs)
+        failed = False
+
+        for para in body_paragraphs:
+            if cancel_event.is_set():
+                yield {"type": "error", "message": "重构已取消"}
+                return
+
+            try:
+                rewritten = await asyncio.to_thread(
+                    rewriter.rewrite_single,
+                    para.original_text,
+                    {"composite_score": 50},
+                    conservative=False,
+                )
+            except CancelledError:
+                logger.info("[reconstruct] task=%s cancelled at para %d", task_id[:8], para.index)
+                yield {"type": "error", "message": "重构已取消"}
+                return
+            except Exception as e:
+                logger.error("[reconstruct] task=%s para %d failed: %s", task_id[:8], para.index, e)
+                yield {"type": "error", "message": f"重构段落 {para.index + 1} 失败: {e}"}
+                failed = True
+                break
+
+            # 更新段落文本
+            para.original_text = rewritten.strip()
+            para_est = max(1, int(len(para.original_text) * 1.5))
+            total_est += para_est
+            total_cost += self._tokens_to_credits(para_est)
+            done += 1
+
+            yield {
+                "type": "progress",
+                "index": para.index,
+                "current": done,
+                "total": total,
+            }
+
+        if failed:
             task.status = "failed"
             self.db.commit()
-            logger.error("[reconstruct] task=%s failed: %s", task_id[:8], e, exc_info=True)
-            yield {"type": "error", "message": f"重构失败: {e}"}
             return
 
-        # 更新段落文本
-        new_parts = rewritten.split("\n\n")
-        for i, para in enumerate(paragraphs):
-            if i < len(new_parts):
-                para.original_text = new_parts[i].strip()
+        # 更新全文
+        task.original_text = "\n\n".join(p.original_text for p in paragraphs)
 
         # 扣费
         credit_service.consume(
             self.db,
             task.user_id,
-            est,
+            total_est,
             ref_type="reduction_task",
             ref_id=task_id,
             remark="全量重构",
         )
-        task.total_tokens += est
-        task.total_credits += cost
-        task.full_reconstruct = True
+        task.total_tokens += total_est
+        task.total_credits += total_cost
 
         self.db.commit()
         elapsed = time.time() - t0
-        logger.info("[reconstruct] task=%s done: credits=%d elapsed=%.1fs", task_id[:8], cost, elapsed)
-        yield {"type": "complete", "credits_used": cost}
+        logger.info("[reconstruct] task=%s done: %d paras, credits=%d elapsed=%.1fs", task_id[:8], done, total_cost, elapsed)
+        yield {"type": "complete", "credits_used": total_cost}
 
     # ── 改写（SSE） ──
 

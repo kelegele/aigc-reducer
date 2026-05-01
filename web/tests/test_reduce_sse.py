@@ -214,16 +214,20 @@ def test_reconstruction(client):
             assert resp.status_code == 200
             events = _collect_sse_events(resp)
 
-    assert len(events) == 1
-    assert events[0]["type"] == "complete"
-    assert events[0]["credits_used"] >= 1
+    # 逐段重构：2 段 body 段落 → 2 progress + 1 complete
+    assert len(events) >= 2
+    progress_events = [e for e in events if e["type"] == "progress"]
+    complete_events = [e for e in events if e["type"] == "complete"]
+    assert len(progress_events) >= 1
+    assert len(complete_events) == 1
+    assert complete_events[0]["credits_used"] >= 1
 
-    # 验证段落文本被更新
+    # 验证段落文本被更新（逐段调用 rewrite_single，每段都得到 mock 返回值）
     db.refresh(task)
     assert task.full_reconstruct is True
     paras = db.query(ReductionParagraph).filter_by(task_id=task.id).order_by(ReductionParagraph.index).all()
-    assert paras[0].original_text == "重构后的段落1"
-    assert paras[1].original_text == "重构后的段落2"
+    # 每个 body 段落都收到相同的 mock 返回值
+    assert all(p.original_text == mock_rewritten.strip() for p in paras)
 
 
 # ── start_rewrite ──

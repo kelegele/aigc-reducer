@@ -60,7 +60,7 @@ def test_create_task_with_text(db_session):
     assert task.detect_mode == "rules"
     assert task.style == "学术人文化"
     assert task.original_text == "段落一\n\n段落二\n\n段落三"
-    assert task.title == "段落一\n\n段落二\n\n段落三"
+    assert task.title == "段落一"
 
     paras = service._get_paragraphs(task.id)
     assert len(paras) == 3
@@ -70,13 +70,13 @@ def test_create_task_with_text(db_session):
 
 
 def test_create_task_with_long_text(db_session):
-    """标题超过 50 字符时截断。"""
+    """超长标题截断（取首行，超 100 字符时加 ...）。"""
     user = _create_user(db_session)
-    long_text = "这是一段很长的文字" * 20  # >50 chars
+    long_text = "这是一段很长的文字" * 20  # >100 chars, 无换行
     task, _ = _create_task_sync(db_session, user.id, text=long_text)
 
     assert task.title.endswith("...")
-    assert len(task.title) <= 53  # 50 + "..."
+    assert len(task.title) <= 103  # 100 + "..."
 
 
 def test_create_task_no_input(db_session):
@@ -286,7 +286,6 @@ def test_estimate_credits_detect_rules(db_session):
 
     result = service.estimate_credits(task.id, "detect")
     # rules 模式走 else 分支 est=0，但 _tokens_to_credits(0) = max(1, 0) = 1
-    assert result["estimated_tokens"] == 0
     assert result["estimated_credits"] == 1  # max(1, 0)
     # balance=0, cost=1 → insufficient
     assert result["sufficient"] is False
@@ -309,7 +308,6 @@ def test_estimate_credits_reconstruct(db_session):
 
     result = service.estimate_credits(task.id, "reconstruct")
     assert result["estimated_credits"] > 0
-    assert "estimated_tokens" in result
 
 
 def test_estimate_credits_rewrite(db_session):
@@ -318,7 +316,6 @@ def test_estimate_credits_rewrite(db_session):
 
     # 没有 needs_processing 的段落，sum 为 0，但 _tokens_to_credits 有 max(1, ...)
     result = service.estimate_credits(task.id, "rewrite")
-    assert result["estimated_tokens"] == 0
     assert result["estimated_credits"] == 1  # max(1, 0)
 
     # 用足够长的文本创建任务，确保积分预估 > 1
