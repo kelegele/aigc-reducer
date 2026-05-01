@@ -93,7 +93,7 @@ const DETECT_MODES: DetectModeOption[] = [
 export default function NewTask() {
   const navigate = useNavigate();
   const { token: t } = theme.useToken();
-  const { message } = AntApp.useApp();
+  const { message, modal } = AntApp.useApp();
 
   const [sourceType, setSourceType] = useState<"file" | "text">("text");
   const [textContent, setTextContent] = useState("");
@@ -127,10 +127,37 @@ export default function NewTask() {
       message.success("任务创建成功");
       navigate(`/reduce/${task.id}`);
     } catch (err: unknown) {
-      const detail = (
-        err as { response?: { data?: { detail?: string } } }
-      )?.response?.data?.detail;
-      if (detail) message.error(detail);
+      const resp = (err as {
+        response?: {
+          status?: number;
+          data?: {
+            detail?:
+              | string
+              | { message: string; existing_task_id: string; existing_task_title: string };
+          };
+        };
+      })?.response;
+
+      if (resp?.status === 409 && typeof resp?.data?.detail === "object") {
+        const d = resp.data.detail;
+        modal.confirm({
+          title: "已有进行中的任务",
+          content: (
+            <span>
+              {d.message}
+              <br />
+              任务 ID：<Typography.Text code>{d.existing_task_id.slice(0, 8)}</Typography.Text>
+            </span>
+          ),
+          okText: "前往检测记录",
+          cancelText: "关闭",
+          onOk: () => navigate("/tasks"),
+        });
+      } else {
+        const detail =
+          typeof resp?.data?.detail === "string" ? resp.data.detail : undefined;
+        if (detail) message.error(detail);
+      }
     } finally {
       setSubmitting(false);
     }

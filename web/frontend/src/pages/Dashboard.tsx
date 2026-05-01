@@ -23,6 +23,7 @@ function taskStatusColor(status: string): string {
   switch (status) {
     case "completed": return "success";
     case "failed": return "error";
+    case "cancelled": return "warning";
     default: return "processing";
   }
 }
@@ -167,7 +168,7 @@ export default function Dashboard() {
         style={{ marginTop: 16 }}
         title="最近检测记录"
         extra={
-          <Button type="link" icon={<RightOutlined />} onClick={() => navigate("/task-list")}>
+          <Button type="link" icon={<RightOutlined />} onClick={() => navigate("/tasks")}>
             查看全部
           </Button>
         }

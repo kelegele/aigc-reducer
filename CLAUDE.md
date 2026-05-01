@@ -329,11 +329,11 @@ import { message, Modal } from "antd";
 
 **前提**：`App.tsx` 已用 `<AntApp>` 包裹路由，所有子组件均可使用此 hook。
 
-### 设计规范
+### 视觉设计规范在 DESIGN.md
 
-- `DESIGN.md` 为全站设计规范，所有页面（包括 Landing、Login、Dashboard、Admin）必须遵守其中的配色、字体、间距体系
-- 所有页面必须同时适配深色和浅色模式，禁止硬编码颜色值（如 `#00d992`、`#f50`）
-- 使用 `theme.useToken()` 获取主题 token（`token.colorPrimary`、`token.colorSuccess`、`token.colorError` 等）
+**所有视觉设计规范（配色、字体、间距、组件样式、交互模式）统一在 `DESIGN.md` 中维护。CLAUDE.md 不维护视觉设计规范。** 修改视觉设计时必须同步更新 DESIGN.md。
+
+- 所有页面必须同时适配深色和浅色模式，禁止硬编码颜色值（如 `#00d992`、`#f50`）。使用 `theme.useToken()` 获取主题 token。
 
 ### 隐藏 UI 框架指纹
 
@@ -356,6 +356,34 @@ onChange: (page) => fetchList({ page, size: 10 })
 ```
 
 **原因**：积分流水页的 `showSizeChanger` 显示了 `10 / 20 / 50` 选项，但 `onChange` 中 `size` 硬编码为 `10`，导致切换无效。
+
+### 下拉筛选框必须用 allowClear + placeholder
+
+所有状态/类型筛选的 `Select` 组件**必须**用 `allowClear` + `placeholder` 实现"全部"效果，**禁止**将"全部"作为单选选项之一（如 `{ value: "", label: "全部" }`）。
+
+```typescript
+// 正确 — allowClear 清空后值为 undefined，后端收到 None 不过滤
+<Select
+  allowClear
+  placeholder="状态筛选"
+  value={statusFilter}
+  onChange={(v) => { setStatusFilter(v); setPage(1); }}
+  options={[
+    { label: "进行中", value: "in_progress" },
+    { label: "已完成", value: "completed" },
+    { label: "失败", value: "failed" },
+  ]}
+/>
+
+// 错误 — "全部"作为选项混在单选列表中
+const STATUS_OPTIONS = [
+  { value: "", label: "全部" },
+  { value: "in_progress", label: "进行中" },
+  ...
+];
+```
+
+**原因**：清空=全部是多选列表的通用交互模式，单选项占位会混淆"全部"和空值，且不符合 antd 的 `allowClear` 设计意图。
 
 ### 首页 SEO/GEO 规范
 
@@ -449,6 +477,33 @@ def get_task_detail(
 复用用户端已有响应格式（`_task_to_response()`），确保 admin 详情页与用户详情页数据一致。前端也复用同一个 React 组件，仅通过 `isAdminMode` 区分 API 调用。
 
 **原因**：直接修改 `get_task(user_id)` 方法跳过 user_id 校验会破坏普通用户的权限隔离。独立方法 + admin 路由守卫 = 明确的责任边界。
+
+### 每个用户同时只能有一个进行中的任务
+
+创建检测任务时**必须**检查该用户是否已有未完成的任务。`completed`、`failed`、`cancelled` 算已结束，其余所有状态均视为进行中。如已有进行中任务，返回 ValueError 禁止创建。
+
+```python
+existing = (
+    self.db.query(ReductionTask)
+    .filter(
+        ReductionTask.user_id == user_id,
+        ReductionTask.status.notin_(["completed", "failed", "cancelled"]),
+    )
+    .first()
+)
+if existing:
+    raise ValueError("您已有进行中的任务，请等待完成后再创建新任务")
+```
+
+**原因**：避免用户并发执行多个检测/改写任务，防止积分双扣、数据库竞争条件、LLM 并发调用超出速率限制。
+
+### 状态筛选必须覆盖所有终端状态
+
+任何涉及任务状态筛选的地方（前端下拉框、后端查询逻辑），**必须**覆盖全部终端状态值。当新增状态时（如 `cancelled`），必须检查所有筛选点是否遗漏。
+
+终端状态集合：`completed`、`failed`、`cancelled`。进行中判断：`status NOT IN (completed, failed, cancelled)`。
+
+**原因**：cancelled 状态后加入模型，History/Dashboard/AdminContent 等多处筛选下拉框遗漏此状态，导致已停止任务不可见或被误导为"进行中"。
 
 ### HTTP 响应头含非 ASCII 内容必须用 RFC 5987 编码
 

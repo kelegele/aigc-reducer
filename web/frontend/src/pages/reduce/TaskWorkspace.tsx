@@ -526,7 +526,7 @@ export default function TaskWorkspace() {
     (choice: PARAGRAPH_CHOICE.AGGRESSIVE | PARAGRAPH_CHOICE.CONSERVATIVE) => {
       if (!task) return;
       const paragraphsNeedingRewrite = task.paragraphs.filter(
-        (p) => p.status === TASK_STATUS.REWRITTEN && p.risk_level && p.risk_level !== RISK_LEVEL.LOW,
+        (p) => p.status === TASK_STATUS.REWRITTEN && p.risk_level && p.risk_level !== RISK_LEVEL.LOW && !p.is_heading,
       );
       const promises = paragraphsNeedingRewrite.map((p) =>
         confirmParagraph(taskId, p.index, choice).then(() => p.index),
@@ -577,7 +577,7 @@ export default function TaskWorkspace() {
       if (lvl in counts) {
         (counts as Record<string, number>)[lvl]++;
       }
-      if (lvl !== RISK_LEVEL.LOW && lvl !== null) counts.needsProcessing++;
+      if (lvl !== RISK_LEVEL.LOW && lvl !== null && !p.is_heading) counts.needsProcessing++;
     }
     return counts;
   }, [task]);
@@ -585,7 +585,7 @@ export default function TaskWorkspace() {
   const allConfirmed = useMemo(() => {
     if (!task) return false;
     const needsProcessing = task.paragraphs.filter(
-      (p) => p.risk_level && p.risk_level !== RISK_LEVEL.LOW,
+      (p) => p.risk_level && p.risk_level !== RISK_LEVEL.LOW && !p.is_heading,
     );
     if (needsProcessing.length === 0) {
       // 所有段落低风险或无检测结果时，可以直接 finalize
@@ -597,7 +597,7 @@ export default function TaskWorkspace() {
   const paragraphsNeedingReview = useMemo(() => {
     if (!task) return [];
     return task.paragraphs.filter(
-      (p) => p.risk_level && p.risk_level !== RISK_LEVEL.LOW && p.status === TASK_STATUS.REWRITTEN,
+      (p) => p.risk_level && p.risk_level !== RISK_LEVEL.LOW && !p.is_heading && p.status === TASK_STATUS.REWRITTEN,
     );
   }, [task]);
 
@@ -1624,7 +1624,7 @@ export default function TaskWorkspace() {
             <Title level={5} type="secondary">该任务已停止</Title>
             <Text type="secondary">暂无解析出内容</Text>
             <div style={{ marginTop: 16 }}>
-              <Button onClick={() => navigate(isAdminMode ? "/admin/content" : "/task-list")}>返回检测记录</Button>
+              <Button onClick={() => navigate(isAdminMode ? "/admin/content" : "/tasks")}>返回检测记录</Button>
             </div>
           </Card>
         ) : (

@@ -5,17 +5,14 @@ import {
   App as AntApp,
   Button,
   Card,
-  Col,
   Empty,
   Input,
-  List,
-  Row,
   Select,
-  Spin,
+  Table,
   Tag,
   Typography,
-  theme,
 } from "antd";
+import type { ColumnsType } from "antd/es/table";
 import {
   PlusCircleOutlined,
   StopOutlined,
@@ -29,10 +26,10 @@ import {
 const { Title, Text } = Typography;
 
 const STATUS_OPTIONS = [
-  { value: "", label: "全部" },
   { value: "in_progress", label: "进行中" },
   { value: "completed", label: "已完成" },
   { value: "failed", label: "失败" },
+  { value: "cancelled", label: "已停止" },
 ];
 
 function taskStatusColor(status: string): string {
@@ -62,15 +59,14 @@ function formatDuration(created: string, completed: string | null): string {
 
 export default function History() {
   const navigate = useNavigate();
-  const { token: themeToken } = theme.useToken();
   const { message, modal } = AntApp.useApp();
 
   const [tasks, setTasks] = useState<TaskListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
   const [keyword, setKeyword] = useState("");
 
   const loadTasks = useCallback(async () => {
@@ -101,10 +97,93 @@ export default function History() {
     setPage(1);
   };
 
-  const handleStatusChange = (value: string) => {
-    setStatusFilter(value);
-    setPage(1);
-  };
+  const columns: ColumnsType<TaskListItem> = [
+    {
+      title: "任务标题",
+      dataIndex: "title",
+      key: "title",
+      ellipsis: true,
+    },
+    {
+      title: "任务 ID",
+      dataIndex: "id",
+      key: "id",
+      width: 110,
+      render: (v: string) => (
+        <Text copyable={{ text: v, tooltips: ["复制 ID", "已复制"] }} style={{ fontSize: 12, fontFamily: "monospace" }}>
+          {v.slice(0, 8)}
+        </Text>
+      ),
+    },
+    {
+      title: "状态",
+      dataIndex: "status",
+      key: "status",
+      width: 90,
+      render: (v: string) => (
+        <Tag color={taskStatusColor(v)}>{TASK_STATUS_LABELS[v] ?? v}</Tag>
+      ),
+    },
+    {
+      title: "创建时间",
+      dataIndex: "created_at",
+      key: "created_at",
+      width: 170,
+      render: (v: string) => new Date(v + "Z").toLocaleString("zh-CN"),
+    },
+    {
+      title: "耗时",
+      key: "duration",
+      width: 80,
+      render: (_: unknown, r: TaskListItem) => formatDuration(r.created_at, r.completed_at),
+    },
+    {
+      title: "消耗积分",
+      dataIndex: "total_credits",
+      key: "total_credits",
+      width: 90,
+      align: "center",
+    },
+    {
+      title: "操作",
+      key: "actions",
+      width: 120,
+      align: "center",
+      render: (_: unknown, item: TaskListItem) => {
+        const isInProgress = !["completed", "failed", "cancelled"].includes(item.status);
+        if (!isInProgress) return null;
+        return (
+          <Button
+            size="small"
+            danger
+            icon={<StopOutlined />}
+            onClick={(e) => {
+              e.stopPropagation();
+              modal.confirm({
+                title: "确认停止任务",
+                content: "停止后任务将无法恢复，确认停止吗？",
+                okText: "确认停止",
+                okType: "danger",
+                cancelText: "取消",
+                onOk: async () => {
+                  try {
+                    await cancelTask(item.id);
+                    message.success("任务已停止");
+                    loadTasks();
+                  } catch (err: unknown) {
+                    const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+                    message.error(detail || "停止失败");
+                  }
+                },
+              });
+            }}
+          >
+            停止
+          </Button>
+        );
+      },
+    },
+  ];
 
   return (
     <div>
@@ -120,121 +199,52 @@ export default function History() {
       </div>
 
       <Card size="small" style={{ marginBottom: 16 }}>
-        <Row gutter={12} align="middle">
-          <Col>
-            <Select
-              value={statusFilter}
-              onChange={handleStatusChange}
-              options={STATUS_OPTIONS}
-              style={{ width: 120 }}
-            />
-          </Col>
-          <Col flex="auto">
-            <Input.Search
-              placeholder="搜索标题或任务 ID"
-              allowClear
-              onSearch={handleSearch}
-              style={{ maxWidth: 320 }}
-            />
-          </Col>
-        </Row>
+        <div style={{ display: "flex", gap: 12 }}>
+          <Select
+            allowClear
+            placeholder="状态筛选"
+            value={statusFilter}
+            onChange={(v) => {
+              setStatusFilter(v);
+              setPage(1);
+            }}
+            options={STATUS_OPTIONS}
+            style={{ width: 130 }}
+          />
+          <Input.Search
+            placeholder="搜索标题或任务 ID"
+            allowClear
+            onSearch={handleSearch}
+            style={{ maxWidth: 320 }}
+          />
+        </div>
       </Card>
 
-      <Spin spinning={loading}>
-        {tasks.length === 0 && !loading ? (
-          <Card>
-            <Empty description="暂无任务" />
-          </Card>
-        ) : (
-          <List
-            dataSource={tasks}
-            pagination={{
-              current: page,
-              pageSize,
-              total,
-              onChange: (p) => setPage(p),
-              showTotal: (t) => `共 ${t} 条`,
-              size: "small",
-              style: { textAlign: "center", marginTop: 16 },
-            }}
-            renderItem={(item) => {
-                const isInProgress = !["completed", "failed", "cancelled"].includes(item.status);
-                return (
-              <List.Item
-                style={{
-                  cursor: "pointer",
-                  padding: "12px 16px",
-                  borderRadius: 8,
-                  marginBottom: 4,
-                  transition: "background 0.2s",
-                }}
-                onClick={() => navigate(`/reduce/${item.id}`)}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.background = themeToken.colorBgLayout;
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.background = "transparent";
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
-                  <Text
-                    strong
-                    ellipsis
-                    style={{ flex: 1, fontSize: 14 }}
-                  >
-                    {item.title}
-                  </Text>
-                  <Text type="secondary" style={{ fontSize: 11, fontFamily: "monospace", opacity: 0.5 }} copyable={{ text: item.id, tooltips: ["复制 ID", "已复制"] }}>
-                    {item.id.slice(0, 8)}
-                  </Text>
-                  <Tag color={taskStatusColor(item.status)}>
-                    {TASK_STATUS_LABELS[item.status] ?? item.status}
-                  </Tag>
-                  <Text type="secondary" style={{ fontSize: 12, whiteSpace: "nowrap" }}>
-                    {new Date(item.created_at + "Z").toLocaleString("zh-CN")}
-                  </Text>
-                  <Text type="secondary" style={{ fontSize: 12, whiteSpace: "nowrap" }}>
-                    {formatDuration(item.created_at, item.completed_at)}
-                  </Text>
-                  <Text type="secondary" style={{ fontSize: 12, whiteSpace: "nowrap" }}>
-                    {item.total_credits} 积分
-                  </Text>
-                  {isInProgress && (
-                    <Button
-                      size="small"
-                      danger
-                      icon={<StopOutlined />}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        modal.confirm({
-                          title: "确认停止任务",
-                          content: "停止后任务将无法恢复，确认停止吗？",
-                          okText: "确认停止",
-                          okType: "danger",
-                          cancelText: "取消",
-                          onOk: async () => {
-                            try {
-                              await cancelTask(item.id);
-                              message.success("任务已停止");
-                              loadTasks();
-                            } catch (err: unknown) {
-                              const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-                              message.error(detail || "停止失败");
-                            }
-                          },
-                        });
-                      }}
-                    >
-                      停止
-                    </Button>
-                  )}
-                </div>
-              </List.Item>
-              );
-            }}
-          />
-        )}
-      </Spin>
+      <Table
+        columns={columns}
+        dataSource={tasks}
+        rowKey="id"
+        loading={loading}
+        scroll={{ x: 800 }}
+        locale={{ emptyText: <Empty description="暂无任务" /> }}
+        onRow={(item) => ({
+          onClick: () => navigate(`/reduce/${item.id}`),
+          style: { cursor: "pointer" },
+        })}
+        pagination={{
+          current: page,
+          pageSize,
+          total,
+          showSizeChanger: true,
+          pageSizeOptions: [10, 20, 50],
+          locale: { items_per_page: "条/页" },
+          showTotal: (t) => `共 ${t} 条`,
+          onChange: (p, ps) => {
+            setPage(p);
+            setPageSize(ps);
+          },
+        }}
+      />
     </div>
   );
 }

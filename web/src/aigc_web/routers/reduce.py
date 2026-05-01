@@ -22,7 +22,7 @@ from aigc_web.schemas.reduce import (
     TaskResponse,
     UserStatsResponse,
 )
-from aigc_web.services.reduce import ReduceService
+from aigc_web.services.reduce import ConcurrentTaskError, ReduceService
 
 reduce_router = APIRouter(prefix="/api/reduce", tags=["reduce"])
 
@@ -64,6 +64,15 @@ async def create_task(
             file_path=file_path,
         )
         return _task_to_response(task)
+    except ConcurrentTaskError as e:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": str(e),
+                "existing_task_id": e.existing_task_id,
+                "existing_task_title": e.existing_task_title,
+            },
+        ) from e
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     finally:

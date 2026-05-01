@@ -86,7 +86,7 @@ export default function App() {
           >
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/credits" element={<Credits />} />
-            <Route path="/task-list" element={<History />} />
+            <Route path="/tasks" element={<History />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/reduce/new" element={<NewTask />} />
             <Route path="/reduce/:taskId" element={<TaskWorkspace />} />

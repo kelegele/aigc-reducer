@@ -7,7 +7,7 @@ import json
 import logging
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import AsyncGenerator
 
 from sqlalchemy.orm import Session
@@ -24,6 +24,15 @@ from aigc_web.models.reduction_task import ReductionTask
 from aigc_web.services import credit as credit_service
 
 logger = logging.getLogger(__name__)
+
+
+class ConcurrentTaskError(ValueError):
+    """用户已有进行中任务时抛出。"""
+
+    def __init__(self, existing_task_id: str, existing_task_title: str):
+        self.existing_task_id = existing_task_id
+        self.existing_task_title = existing_task_title
+        super().__init__(f"您已有进行中的任务「{existing_task_title}」，请等待完成后再创建新任务")
 
 
 class ReduceService:
@@ -48,6 +57,18 @@ class ReduceService:
         file_path: str | None = None,
     ) -> ReductionTask:
         """创建改写任务。解析文本/文件为段落。"""
+        # 0. 检查是否有未完成的任务
+        existing = (
+            self.db.query(ReductionTask)
+            .filter(
+                ReductionTask.user_id == user_id,
+                ReductionTask.status.notin_(["completed", "failed", "cancelled"]),
+            )
+            .first()
+        )
+        if existing:
+            raise ConcurrentTaskError(existing.id, existing.title)
+
         # 1. 获取原文并解析段落
         if text:
             original_text = text
@@ -535,7 +556,7 @@ class ReduceService:
             p.final_text for p in sorted_paras if p.final_text
         )
         task.status = "completed"
-        task.completed_at = datetime.now()
+        task.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.db.commit()
         self.db.refresh(task)
         logger.info("[finalize] task=%s done: %d paragraphs", task_id[:8], len(paragraphs))
@@ -551,7 +572,7 @@ class ReduceService:
             raise ValueError(f"任务已结束，无法取消: {task.status}")
         prev_status = task.status
         task.status = "cancelled"
-        task.completed_at = datetime.now()
+        task.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.db.commit()
         self.db.refresh(task)
         logger.info("[cancel] task=%s cancelled from status=%s", task_id[:8], prev_status)
@@ -654,7 +675,7 @@ class ReduceService:
             self.db.query(sa_func.count(ReductionTask.id))
             .filter_by(user_id=user_id)
             .filter(ReductionTask.status.in_([
-                "detected", "rewriting", "rewritten", "completed", "failed",
+                "detected", "rewriting", "rewritten", "finalizing", "completed", "failed",
             ]))
             .scalar() or 0
         )

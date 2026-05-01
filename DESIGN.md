@@ -321,3 +321,86 @@ When refining existing screens generated with this design system:
 5. For glow effects, specify "Emerald Signal Green (#00d992) as a drop-shadow with 2–8px blur radius"
 6. Always specify which font — system-ui for headings, Inter for body/UI, SFMono-Regular for code
 7. Keep animations slow and subtle — marquee scrolls at 25–80s, glow pulses gently
+
+## 10. UI Interaction Patterns
+
+### Dropdown Filters (Select)
+
+下拉筛选框统一使用 **`allowClear` + `placeholder`** 模式实现"全部"效果。清空筛选即为查看全部。
+
+```typescript
+// 正确 — allowClear 清空值为 undefined，后端不过滤
+<Select
+  allowClear
+  placeholder="状态筛选"
+  value={statusFilter}
+  onChange={(v) => { setStatusFilter(v); setPage(1); }}
+  options={STATUS_OPTIONS}
+  style={{ width: 130 }}
+/>
+
+const STATUS_OPTIONS = [
+  { label: "进行中", value: "in_progress" },
+  { label: "已完成", value: "completed" },
+  { label: "失败", value: "failed" },
+  { label: "已停止", value: "cancelled" },
+];
+```
+
+- `value` 类型为 `string | undefined`，初始值 `undefined`
+- `STATUS_OPTIONS` 禁止包含 `{ value: "", label: "全部" }`
+- 切换筛选项时重置页码 `setPage(1)`
+
+### Blocking Modal (Confirm with Cancel)
+
+阻止性操作使用 `modal.confirm()` 配合 `cancelText`，确保弹窗可关闭。
+
+```typescript
+import { App as AntApp } from "antd";
+const { modal } = AntApp.useApp();
+
+modal.confirm({
+  title: "已有进行中的任务",
+  content: "提示内容",
+  okText: "前往检测记录",
+  cancelText: "关闭",
+  onOk: () => navigate("/tasks"),
+});
+```
+
+- 禁止使用 `modal.info()` — 它缺少关闭按钮，用户无法取消
+- 必须使用 `App.useApp()` 获取 `modal` 实例，保证主题适配
+- `cancelText` 提供明确的关闭入口
+
+### Concurrent Task Prevention
+
+每个用户同时只能有一个进行中的任务。创建新任务时后端返回 `409 Conflict`，前端弹窗引导用户前往已有任务。
+
+```typescript
+// 后端 — 自定义异常携带已有任务信息
+class ConcurrentTaskError(ValueError):
+    def __init__(self, existing_task_id: str, existing_task_title: str):
+        self.existing_task_id = existing_task_id
+        self.existing_task_title = existing_task_title
+        super().__init__(f"您已有进行中的任务「{existing_task_title}」")
+
+# 前端 — 401 或 409 触发弹窗
+if (resp?.status === 409 && typeof resp?.data?.detail === "object") {
+  const d = resp.data.detail;
+  modal.confirm({
+    title: "已有进行中的任务",
+    content: <span>{d.message}<br />任务 ID：<Text code>{d.existing_task_id.slice(0, 8)}</Text></span>,
+    okText: "前往检测记录",
+    cancelText: "关闭",
+    onOk: () => navigate("/tasks"),
+  });
+}
+```
+
+### Status Filter Coverage
+
+状态筛选下拉框必须覆盖所有终端状态值。新增状态时，必须检查所有筛选点是否遗漏。
+
+- 任务终端状态集合：`completed`、`failed`、`cancelled`
+- 进行中判断：`status NOT IN (completed, failed, cancelled)`
+- Dashboard、History、AdminContent 等多处筛选下拉框必须同步更新
