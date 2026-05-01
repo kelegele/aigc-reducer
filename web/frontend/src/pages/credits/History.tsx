@@ -121,8 +121,11 @@ export default function History() {
           current: transactions?.page ?? 1,
           total: transactions?.total ?? 0,
           pageSize: transactions?.size ?? 10,
-          onChange: (page) =>
-            fetchTransactions({ type: typeFilter, keyword: keyword || undefined, page, size: 10 }),
+          showSizeChanger: true,
+          pageSizeOptions: [10, 20, 50],
+          locale: { items_per_page: "条/页" },
+          onChange: (page, pageSize) =>
+            fetchTransactions({ type: typeFilter, keyword: keyword || undefined, page, size: pageSize }),
         }}
       />
     </div>

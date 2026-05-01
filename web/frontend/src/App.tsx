@@ -56,14 +56,18 @@ export default function App() {
 
   return (
     <ConfigProvider
+      prefixCls="ag"
+      iconPrefixCls="ag-icon"
       locale={zhCN}
       theme={{
+        cssVar: { key: "ag" },
         algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
         token: {
           ...(isDark ? darkTokens : lightTokens),
           borderRadius: 8,
           fontFamily: "Inter, system-ui, -apple-system, sans-serif",
         },
+        hashed: false,
       }}
     >
       <AntApp>

@@ -196,6 +196,32 @@ taskkill //F //PID <PID>
 
 **原因**：Vite 自动切换端口后（如 5173→5174），浏览器缓存和书签还指向旧端口，前端代理配置也可能不一致，导致 502/连接失败等难以排查的问题。端口是固定的，只有旧进程残留才会冲突，杀掉即可。
 
+### 切换分支后必须重启后端进程
+
+切换 git 分支后，**必须先杀掉所有旧的后端进程再启动新进程**。Uvicorn 不会自动重载新分支的代码（除非 `--reload` 模式），旧进程会继续用旧代码响应请求。
+
+```bash
+# 1. 杀掉所有 Python 进程（最彻底）
+taskkill //F //IM python.exe
+
+# 2. 确认端口释放
+netstat -ano | grep ':9000.*LISTENING'  # 应该无输出
+
+# 3. 重新安装 core 包（分支切换后依赖可能不同）
+cd web && uv sync --reinstall-package aigc-reducer-core
+
+# 4. 启动后端
+uv run uvicorn aigc_web.main:app --port 9000
+```
+
+**原因**：切换到 `feat/detection-history` 分支后，4 个旧 Python 进程同时占用 9000 端口，导致 API 请求全部被旧代码（无 `keyword` 搜索、无 `ref_id` 字段）处理。花了大量时间 debug `ilike` 查询，实际是代码版本问题。
+
+### Windows 多进程残留端口
+
+Windows 上 `taskkill //F //PID <pid>` 可能杀不死父进程，子进程（uvicorn reload worker）会继续占用端口。**最可靠的方式是 `taskkill //F //IM python.exe` 一次性杀掉所有 Python 进程**，然后确认端口完全释放后再启动。
+
+**原因**：4 个 uvicorn 进程（含 reload parent 和 worker）同时绑定 9000 端口，逐个 `taskkill //PID` 显示成功但进程仍在。`//IM` 按映像名杀才彻底清理。
+
 ### core 包修改后必须重装到 web venv
 
 修改 `core/` 代码后，web 的 venv **不会**自动更新。必须显式执行：
@@ -292,6 +318,28 @@ import { message, Modal } from "antd";
 - `DESIGN.md` 为全站设计规范，所有页面（包括 Landing、Login、Dashboard、Admin）必须遵守其中的配色、字体、间距体系
 - 所有页面必须同时适配深色和浅色模式，禁止硬编码颜色值（如 `#00d992`、`#f50`）
 - 使用 `theme.useToken()` 获取主题 token（`token.colorPrimary`、`token.colorSuccess`、`token.colorError` 等）
+
+### 隐藏 UI 框架指纹
+
+`ConfigProvider` 已配置 `prefixCls="ag"`, `iconPrefixCls="ag-icon"`, `cssVar: { key: "ag" }`, `hashed: false`。所有 antd 组件的 CSS 类名前缀从 `ant-` 替换为 `ag-`，CSS 变量前缀从 `--ant-` 替换为 `--ag-`。
+
+**禁止在代码中硬编码 `ant-` 前缀的 CSS 类名**。如需在自定义样式中引用 antd 组件类名，必须使用 `ag-` 前缀（如 `.ag-menu-horizontal` 而非 `.ant-menu-horizontal`）。
+
+**原因**：`ant-` 前缀暴露了 UI 框架为 Ant Design，影响产品专业感。
+
+### 分页器的 pageSize 必须动态传递
+
+Ant Design `Table` 的 `pagination.onChange` 回调签名为 `(page, pageSize)`。切换每页条数时必须使用 `pageSize` 参数，禁止硬编码为固定值。
+
+```typescript
+// 正确
+onChange: (page, pageSize) => fetchList({ page, size: pageSize })
+
+// 错误 — 切换 20 条/页无效，总是请求 10 条
+onChange: (page) => fetchList({ page, size: 10 })
+```
+
+**原因**：积分流水页的 `showSizeChanger` 显示了 `10 / 20 / 50` 选项，但 `onChange` 中 `size` 硬编码为 `10`，导致切换无效。
 
 ### 首页 SEO/GEO 规范
 
@@ -526,3 +574,4 @@ npm run build
 - **待支付订单过期**：当前 pending 订单无自动关闭机制，需加定时任务（如 30 分钟未支付自动关闭）
 - **DOCX 下载/报告导出**：P3 前端尚缺 DOCX 格式下载和改写报告生成功能
 - **CREDITS_PER_1K_TOKENS 定价校准**：当前默认值 1.0 导致所有套餐亏损（Kimi-K2.6 输出 ¥27/M tokens，混合成本约 ¥0.029/credit）。需根据实际 LLM 成本调整为 3.0–4.0，已在管理后台配置
+- **移动端深度适配**：当前仅有基础响应式（汉堡菜单 + Drawer 导航）。需要深度适配的页面：检测历史列表（卡片式布局）、积分流水表格（卡片/折叠式替代）、任务工作区（Steps 改为竖向、段落列表改为手风琴）、登录页、Dashboard 统计卡片等

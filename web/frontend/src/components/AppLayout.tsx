@@ -1,11 +1,12 @@
 // web/frontend/src/components/AppLayout.tsx
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
   Layout,
   Menu,
   Avatar,
   Button,
+  Drawer,
   Dropdown,
   Typography,
   theme,
@@ -23,6 +24,7 @@ import {
   FileTextOutlined,
   BulbOutlined,
   EditOutlined,
+  MenuOutlined,
 } from "@ant-design/icons";
 import { useAuthStore } from "../stores/auth";
 import { useThemeStore } from "../stores/theme";
@@ -61,6 +63,7 @@ export default function AppLayout() {
   const { user, logout, fetchUser } = useAuthStore();
   const { token: themeToken } = theme.useToken();
   const { isDark, toggle } = useThemeStore();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -107,7 +110,29 @@ export default function AppLayout() {
             onClick={({ key }) => navigate(key)}
             style={{ border: "none", flex: 1 }}
           />
+          <Button
+            type="text"
+            icon={<MenuOutlined />}
+            onClick={() => setMobileMenuOpen(true)}
+            className="show-on-mobile"
+            style={{ color: themeToken.colorText }}
+          />
         </div>
+        <Drawer
+          placement="left"
+          open={mobileMenuOpen}
+          onClose={() => setMobileMenuOpen(false)}
+          width={240}
+          styles={{ body: { padding: 0 } }}
+        >
+          <Menu
+            mode="inline"
+            selectedKeys={[location.pathname]}
+            items={getMenuItems(!!user?.is_admin)}
+            onClick={({ key }) => { navigate(key); setMobileMenuOpen(false); }}
+            style={{ border: "none" }}
+          />
+        </Drawer>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <Button
             type="text"
@@ -119,7 +144,7 @@ export default function AppLayout() {
           <Dropdown menu={userMenu} placement="bottomRight">
             <div style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
               <Avatar icon={<UserOutlined />} />
-              <Text style={{ display: "none" }} className="show-on-mobile">
+              <Text style={{ display: "none" }}>
                 {user?.nickname}
               </Text>
             </div>

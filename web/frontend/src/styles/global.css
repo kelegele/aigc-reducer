@@ -38,11 +38,15 @@
 }
 
 /* 移动端导航菜单适配 */
+.show-on-mobile {
+  display: none !important;
+}
+
 @media (max-width: 768px) {
-  .ant-menu-horizontal {
+  .ag-menu-horizontal {
     display: none !important;
   }
   .show-on-mobile {
-    display: inline !important;
+    display: inline-flex !important;
   }
 }
