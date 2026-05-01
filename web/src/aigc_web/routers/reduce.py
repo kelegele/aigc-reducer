@@ -20,6 +20,7 @@ from aigc_web.schemas.reduce import (
     ParagraphChoiceRequest,
     TaskListResponse,
     TaskResponse,
+    UserStatsResponse,
 )
 from aigc_web.services.reduce import ReduceService
 
@@ -87,6 +88,16 @@ def list_tasks(
         "page": page,
         "page_size": page_size,
     }
+
+
+@reduce_router.get("/stats", response_model=UserStatsResponse)
+def get_user_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_current_user),
+):
+    """获取用户统计数据。"""
+    service = ReduceService(db)
+    return service.get_user_stats(current_user.id)
 
 
 @reduce_router.get("/tasks/{task_id}", response_model=TaskResponse)

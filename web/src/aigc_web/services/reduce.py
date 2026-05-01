@@ -613,6 +613,52 @@ class ReduceService:
             "sufficient": balance >= cost,
         }
 
+    def get_user_stats(self, user_id: int) -> dict:
+        """获取用户统计数据。"""
+        from sqlalchemy import func as sa_func
+
+        user_tasks = (
+            self.db.query(ReductionTask.id)
+            .filter_by(user_id=user_id)
+            .subquery()
+        )
+
+        detection_count = (
+            self.db.query(sa_func.count(ReductionTask.id))
+            .filter_by(user_id=user_id)
+            .filter(ReductionTask.status.in_([
+                "detected", "rewriting", "rewritten", "completed", "failed",
+            ]))
+            .scalar() or 0
+        )
+
+        rewritten_paragraphs = (
+            self.db.query(sa_func.count(ReductionParagraph.id))
+            .filter(ReductionParagraph.task_id.in_(user_tasks))
+            .filter(ReductionParagraph.user_choice != None)
+            .filter(ReductionParagraph.user_choice != "original")
+            .scalar() or 0
+        )
+
+        total_paragraphs = (
+            self.db.query(sa_func.count(ReductionParagraph.id))
+            .filter(ReductionParagraph.task_id.in_(user_tasks))
+            .scalar() or 0
+        )
+        low_risk_paragraphs = (
+            self.db.query(sa_func.count(ReductionParagraph.id))
+            .filter(ReductionParagraph.task_id.in_(user_tasks))
+            .filter(ReductionParagraph.risk_level == "low")
+            .scalar() or 0
+        )
+        pass_rate = round(low_risk_paragraphs / total_paragraphs * 100, 1) if total_paragraphs > 0 else 0.0
+
+        return {
+            "detection_count": detection_count,
+            "rewritten_paragraphs": rewritten_paragraphs,
+            "pass_rate": pass_rate,
+        }
+
     # ── 私有方法 ──
 
     def _get_task(self, task_id: str) -> ReductionTask:

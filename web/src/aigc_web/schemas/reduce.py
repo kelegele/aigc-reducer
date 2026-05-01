@@ -66,3 +66,9 @@ class TaskListResponse(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class UserStatsResponse(BaseModel):
+    detection_count: int
+    rewritten_paragraphs: int
+    pass_rate: float
