@@ -65,6 +65,12 @@ export interface ConfirmParagraphResponse {
   status: string;
 }
 
+export interface UserStatsResponse {
+  detection_count: number;
+  rewritten_paragraphs: number;
+  pass_rate: number;
+}
+
 // --- API Functions ---
 
 /** 创建任务（multipart form） */
@@ -156,6 +162,12 @@ export async function finalizeTask(taskId: number): Promise<TaskResponse> {
 /** 导出任务结果 */
 export function getExportUrl(taskId: string, format: "markdown" | "docx" = "markdown"): string {
   return `/api/reduce/tasks/${taskId}/export?format=${format}`;
+}
+
+/** 用户统计数据 */
+export async function getUserStats(): Promise<UserStatsResponse> {
+  const resp = await client.get<UserStatsResponse>("/reduce/stats");
+  return resp.data;
 }
 
 // --- SSE Helper ---
