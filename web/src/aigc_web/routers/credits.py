@@ -135,12 +135,15 @@ async def payment_callback(request: Request, db: Session = Depends(get_db)):
 @router.get("/transactions", response_model=TransactionListResponse)
 def list_transactions(
     type: str | None = None,
+    keyword: str | None = None,
     page: int = 1,
     size: int = 10,
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
 ):
-    result = credit_service.get_transactions(db, user.id, type_filter=type, page=page, size=size)
+    result = credit_service.get_transactions(
+        db, user.id, type_filter=type, keyword=keyword, page=page, size=size,
+    )
     return TransactionListResponse(
         items=[
             {
@@ -149,6 +152,7 @@ def list_transactions(
                 "type": tx.type,
                 "amount": tx.amount,
                 "balance_after": tx.balance_after,
+                "ref_id": tx.ref_id,
                 "remark": tx.remark,
                 "created_at": tx.created_at,
             }

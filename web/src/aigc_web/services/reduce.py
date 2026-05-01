@@ -575,6 +575,7 @@ class ReduceService:
         if keyword:
             query = query.filter(
                 ReductionTask.title.ilike(f"%{keyword}%")
+                | ReductionTask.id.ilike(f"%{keyword}%")
             )
         total = query.count()
         tasks = query.offset((page - 1) * page_size).limit(page_size).all()

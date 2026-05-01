@@ -52,6 +52,7 @@ class TransactionResponse(BaseModel):
     type: str
     amount: int
     balance_after: int
+    ref_id: str | None
     remark: str | None
     created_at: datetime
 

@@ -122,7 +122,7 @@ export default function History() {
           </Col>
           <Col flex="auto">
             <Input.Search
-              placeholder="搜索任务标题"
+              placeholder="搜索标题或任务 ID"
               allowClear
               onSearch={handleSearch}
               style={{ maxWidth: 320 }}
@@ -172,6 +172,9 @@ export default function History() {
                     style={{ flex: 1, fontSize: 14 }}
                   >
                     {item.title}
+                  </Text>
+                  <Text type="secondary" style={{ fontSize: 11, fontFamily: "monospace", opacity: 0.5 }} copyable={{ text: item.id, tooltips: ["复制 ID", "已复制"] }}>
+                    {item.id.slice(0, 8)}
                   </Text>
                   <Tag color={taskStatusColor(item.status)}>
                     {TASK_STATUS_LABELS[item.status] ?? item.status}

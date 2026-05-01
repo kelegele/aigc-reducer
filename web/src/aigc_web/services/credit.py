@@ -87,6 +87,7 @@ def get_transactions(
     db: Session,
     user_id: int,
     type_filter: str | None = None,
+    keyword: str | None = None,
     page: int = 1,
     size: int = 10,
 ) -> dict:
@@ -94,6 +95,11 @@ def get_transactions(
     query = db.query(CreditTransaction).filter_by(user_id=user_id)
     if type_filter:
         query = query.filter(CreditTransaction.type == type_filter)
+    if keyword:
+        query = query.filter(
+            CreditTransaction.ref_id.ilike(f"%{keyword}%")
+            | CreditTransaction.remark.ilike(f"%{keyword}%")
+        )
 
     total = query.count()
     items = (

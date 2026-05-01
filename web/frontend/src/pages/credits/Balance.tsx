@@ -65,7 +65,19 @@ export default function Balance({ onGoPackages, onGoHistory }: BalanceProps) {
             renderItem={(item) => (
               <List.Item>
                 <List.Item.Meta
-                  title={item.remark || (item.type === "recharge" ? "充值" : "消费")}
+                  title={
+                    <span>
+                      {item.remark || (item.type === "recharge" ? "充值" : "消费")}
+                      {item.ref_id && (
+                        <Text
+                          type="secondary"
+                          style={{ fontSize: 11, marginLeft: 8, fontFamily: "monospace", opacity: 0.5 }}
+                        >
+                          {item.ref_id.slice(0, 8)}
+                        </Text>
+                      )}
+                    </span>
+                  }
                   description={new Date(item.created_at + "Z").toLocaleString("zh-CN")}
                 />
                 <Text type={item.amount > 0 ? "success" : "danger"}>

@@ -44,6 +44,7 @@ export interface TransactionResponse {
   type: string;
   amount: number;
   balance_after: number;
+  ref_id: string | null;
   remark: string | null;
   created_at: string;
 }
@@ -81,6 +82,7 @@ export async function getOrder(orderId: number): Promise<OrderResponse> {
 
 export async function getTransactions(params?: {
   type?: string;
+  keyword?: string;
   page?: number;
   size?: number;
 }): Promise<TransactionListResponse> {

@@ -1,6 +1,6 @@
 // web/frontend/src/pages/credits/History.tsx
 import { useEffect, useState } from "react";
-import { Table, Tag, Select, Typography, theme } from "antd";
+import { App as AntApp, Input, Table, Tag, Select, Typography, theme } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCreditsStore } from "../../stores/credits";
 import type { TransactionResponse } from "../../api/credits";
@@ -10,11 +10,13 @@ const { Title } = Typography;
 export default function History() {
   const { transactions, fetchTransactions, loading } = useCreditsStore();
   const { token } = theme.useToken();
+  const { message } = AntApp.useApp();
   const [typeFilter, setTypeFilter] = useState<string | undefined>(undefined);
+  const [keyword, setKeyword] = useState("");
 
   useEffect(() => {
-    fetchTransactions({ type: typeFilter, page: 1, size: 10 });
-  }, [typeFilter, fetchTransactions]);
+    fetchTransactions({ type: typeFilter, keyword: keyword || undefined, page: 1, size: 10 }).catch(() => {});
+  }, [typeFilter, keyword, fetchTransactions]);
 
   const columns: ColumnsType<TransactionResponse> = [
     {
@@ -22,6 +24,22 @@ export default function History() {
       dataIndex: "trade_no",
       key: "trade_no",
       render: (v: string) => <Typography.Text copyable style={{ fontSize: 12 }}>{v}</Typography.Text>,
+    },
+    {
+      title: "关联任务",
+      dataIndex: "ref_id",
+      key: "ref_id",
+      render: (v: string | null) =>
+        v ? (
+          <Typography.Text
+            copyable={{ text: v, tooltips: ["复制 ID", "已复制"] }}
+            style={{ fontSize: 12, fontFamily: "monospace", color: token.colorTextSecondary }}
+          >
+            {v.slice(0, 8)}
+          </Typography.Text>
+        ) : (
+          <span style={{ color: token.colorTextQuaternary }}>—</span>
+        ),
     },
     {
       title: "时间",
@@ -75,16 +93,24 @@ export default function History() {
         <Title level={5} style={{ margin: 0 }}>
           积分流水
         </Title>
-        <Select
-          style={{ width: 120 }}
-          placeholder="全部类型"
-          allowClear
-          onChange={(v) => setTypeFilter(v)}
-          options={[
-            { label: "充值", value: "recharge" },
-            { label: "消费", value: "consume" },
-          ]}
-        />
+        <div style={{ display: "flex", gap: 8 }}>
+          <Input.Search
+            placeholder="搜索任务 ID"
+            allowClear
+            onSearch={(v) => setKeyword(v)}
+            style={{ width: 180 }}
+          />
+          <Select
+            style={{ width: 120 }}
+            placeholder="全部类型"
+            allowClear
+            onChange={(v) => setTypeFilter(v)}
+            options={[
+              { label: "充值", value: "recharge" },
+              { label: "消费", value: "consume" },
+            ]}
+          />
+        </div>
       </div>
       <Table
         columns={columns}
@@ -96,7 +122,7 @@ export default function History() {
           total: transactions?.total ?? 0,
           pageSize: transactions?.size ?? 10,
           onChange: (page) =>
-            fetchTransactions({ type: typeFilter, page, size: 10 }),
+            fetchTransactions({ type: typeFilter, keyword: keyword || undefined, page, size: 10 }),
         }}
       />
     </div>
