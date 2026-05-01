@@ -1,7 +1,7 @@
 // web/frontend/src/pages/Dashboard.tsx
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { App as AntApp, Card, Col, Row, Statistic, Typography, Button, Empty, List, Tag, Spin, theme } from "antd";
+import { App as AntApp, Card, Col, Row, Statistic, Steps, Typography, Button, Empty, List, Tag, Spin, theme } from "antd";
 import {
   CreditCardOutlined,
   FileTextOutlined,
@@ -124,6 +124,34 @@ export default function Dashboard() {
         <Paragraph type="secondary" style={{ marginBottom: 20 }}>
           上传论文 → AI 检测风险段落 → 选择改写风格 → 下载降重结果。支持 Word、PDF、Markdown 格式，双引擎检测 + 5 种改写风格。
         </Paragraph>
+        <Steps
+          size="small"
+          current={-1}
+          style={{ cursor: "pointer" }}
+          onClick={() => navigate("/reduce/new")}
+          items={[
+            {
+              title: "上传文档",
+              icon: <FileTextOutlined style={{ color: token.colorPrimary }} />,
+              style: { color: token.colorPrimary },
+            },
+            {
+              title: "扫描风险",
+              icon: <SearchOutlined style={{ color: token.colorPrimary }} />,
+              style: { color: token.colorPrimary },
+            },
+            {
+              title: "AI 改写",
+              icon: <ThunderboltOutlined style={{ color: token.colorPrimary }} />,
+              style: { color: token.colorPrimary },
+            },
+            {
+              title: "下载结果",
+              icon: <DownloadOutlined style={{ color: token.colorPrimary }} />,
+              style: { color: token.colorPrimary },
+            },
+          ]}
+        />
       </Card>
 
       {/* 最近检测记录 */}
