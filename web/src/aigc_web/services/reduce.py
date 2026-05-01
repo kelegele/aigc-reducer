@@ -192,7 +192,7 @@ class ReduceService:
             para = paragraphs[i]
             para.detection_result = result
             para.risk_level = result.get("risk_level")
-            para.needs_processing = result.get("risk_level") != "low"
+            para.needs_processing = result.get("risk_level") != "low" and not para.is_heading
             para.status = "detected"
             if para.needs_processing:
                 needs_processing_count += 1
@@ -365,7 +365,7 @@ class ReduceService:
         task.status = "rewriting"
         self.db.flush()
 
-        paragraphs = [p for p in self._get_paragraphs(task_id) if p.needs_processing]
+        paragraphs = [p for p in self._get_paragraphs(task_id) if p.needs_processing and not p.is_heading]
         if not paragraphs:
             task.status = "rewritten"
             self.db.commit()
@@ -647,6 +647,34 @@ def _parse_document_sync(file_path: str) -> list[Paragraph]:
     return parse_document(file_path)
 
 
+def _strip_markdown(text: str) -> str:
+    """清除文本中的 Markdown 格式符号，返回纯文本。"""
+    import re
+    # 去除 # 标题标记
+    text = re.sub(r'^#{1,6}\s+', '', text, flags=re.MULTILINE)
+    # 去除 **粗体** 和 __粗体__
+    text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
+    text = re.sub(r'__(.+?)__', r'\1', text)
+    # 去除 *斜体* 和 _斜体_
+    text = re.sub(r'(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)', r'\1', text)
+    text = re.sub(r'(?<!_)_(?!_)(.+?)(?<!_)_(?!_)', r'\1', text)
+    # 去除 ~~删除线~~
+    text = re.sub(r'~~(.+?)~~', r'\1', text)
+    # 去除 `行内代码`
+    text = re.sub(r'`(.+?)`', r'\1', text)
+    # 去除 ```代码块```
+    text = re.sub(r'```\w*\n?', '', text)
+    # 去除 [链接文字](url)
+    text = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', text)
+    # 去除 ![图片](url)
+    text = re.sub(r'!\[([^\]]*)\]\([^\)]+\)', r'\1', text)
+    # 去除 > 引用标记
+    text = re.sub(r'^>\s?', '', text, flags=re.MULTILINE)
+    # 去除 ---/___ 分割线
+    text = re.sub(r'^[-_*]{3,}\s*$', '', text, flags=re.MULTILINE)
+    return text.strip()
+
+
 def export_docx(task: ReductionTask) -> io.BytesIO:
     """将改写结果导出为 DOCX 文件。"""
     from docx import Document
@@ -654,7 +682,9 @@ def export_docx(task: ReductionTask) -> io.BytesIO:
     doc = Document()
     paragraphs = sorted(task.paragraphs, key=lambda p: p.index)
     for p in paragraphs:
-        text = p.final_text or p.original_text
+        text = _strip_markdown(p.final_text or p.original_text)
+        if not text:
+            continue
         if p.is_heading:
             doc.add_heading(text, level=2)
         else:
