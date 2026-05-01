@@ -11,6 +11,19 @@ AIGC Reducer — 降低学术论文 AIGC 查重率的 CLI 工具 + Web 服务。
 - 所有网页浏览必须使用 `/browse` skill（来自 gstack），**禁止使用 `mcp__claude-in-chrome__*` 工具**
 - 可用 skills：`/browse`、`/qa`、`/qa-only`、`/design-review`、`/connect-chrome`、`/setup-browser-cookies`
 
+### 前端 UI 测试（/browse）
+
+所有前端 UI 验证必须使用 `/browse` skill：导航页面 → snapshot 查看元素 → inspect 检查 CSS 布局/样式 → 截图对比。核心命令：
+
+```bash
+$B goto <url>           # 导航
+$B snapshot -i           # 交互元素
+$B inspect ".selector"    # CSS 计算值（display, flex-direction, dimensions 等）
+$B screenshot /tmp/x.png  # 截图证据
+$B js "..."               # 执行 JS 检查 DOM
+$B html ".selector"       # 获取 HTML 结构
+```
+
 ## Monorepo Structure
 
 - `core/` — 共享检测/改写引擎（`aigc-reducer-core` 包），CLI 和 Web 均依赖此包

@@ -107,6 +107,14 @@ def _parse_docx(file_path: str) -> List[Paragraph]:
             continue
         # 跳过头标题（Heading 1-3）
         if para.style.name.startswith("Heading"):
+            paragraphs.append(Paragraph(
+                text=text,
+                index=index,
+                is_heading=True,
+                has_formula=False,
+                original_format="docx",
+            ))
+            index += 1
             continue
 
         has_formula = bool(re.search(r"\$[^$]+\$", text))
@@ -224,8 +232,12 @@ def _parse_pdf(file_path: str) -> List[Paragraph]:
                         break
 
                 is_heading = first_char_size >= heading_threshold or (
-                    len(stripped) <= 8 and not stripped.endswith(("。", "，", "、", "；", "：", ".", ","))
-                    and not stripped.startswith("-")
+                    len(stripped) <= 30 and not stripped.endswith(("。", "，", "、", "；", "：", ".", ","))
+                    and not stripped.startswith(("-", "（", "("))
+                ) or (
+                    index == 0 and len(paragraphs) == 0
+                    and len(stripped) <= 50
+                    and not stripped.endswith(("。", "；"))
                 )
 
                 # 段落分隔：标题行独立成段 + 前行句末标点 + 间距突增

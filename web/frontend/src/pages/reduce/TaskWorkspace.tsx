@@ -1517,7 +1517,7 @@ export default function TaskWorkspace() {
         </Tag>
       </div>
 
-      <Steps current={currentStep} items={steps} size="small" style={{ marginBottom: 24, display: isReadonly ? "none" : "block" }} />
+      <Steps current={currentStep} items={steps} size="small" style={{ marginBottom: 24, ...(isReadonly ? { display: "none" } : {}) }} />
 
       {isReadonly && task.status === TASK_STATUS.FAILED && (
         <Card style={{ marginBottom: 16, textAlign: "center" }}>

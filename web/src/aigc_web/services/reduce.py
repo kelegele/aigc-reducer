@@ -75,11 +75,12 @@ class ReduceService:
         if first_heading:
             title = first_heading[:100]
         else:
-            title = (
-                original_text[:50].replace("\n", " ") + "..."
-                if len(original_text) > 50
-                else original_text
-            )
+            # 无标题段落时取第一行（避免混入正文内容）
+            first_line = original_text.split("\n")[0].strip()
+            if len(first_line) > 100:
+                title = first_line[:100] + "..."
+            else:
+                title = first_line
         task = ReductionTask(
             user_id=user_id,
             title=title,
