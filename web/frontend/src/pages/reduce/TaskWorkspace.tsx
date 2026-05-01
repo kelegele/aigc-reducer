@@ -575,7 +575,10 @@ export default function TaskWorkspace() {
     const needsProcessing = task.paragraphs.filter(
       (p) => p.risk_level && p.risk_level !== RISK_LEVEL.LOW,
     );
-    if (needsProcessing.length === 0) return false;
+    if (needsProcessing.length === 0) {
+      // 所有段落低风险或无检测结果时，可以直接 finalize
+      return task.status === TASK_STATUS.DETECTED || task.status === TASK_STATUS.REWRITTEN;
+    }
     return needsProcessing.every((p) => !!p.user_choice);
   }, [task]);
 
