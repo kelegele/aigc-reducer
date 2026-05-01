@@ -27,6 +27,14 @@ function taskStatusColor(status: string): string {
   }
 }
 
+function formatDuration(created: string, completed: string | null): string {
+  if (!completed) return "--";
+  const ms = new Date(completed + "Z").getTime() - new Date(created + "Z").getTime();
+  const sec = Math.round(ms / 1000);
+  if (sec < 60) return `${sec}秒`;
+  return `${Math.floor(sec / 60)}分${sec % 60}秒`;
+}
+
 export default function Dashboard() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
@@ -185,6 +193,9 @@ export default function Dashboard() {
                   </Tag>
                   <Text type="secondary" style={{ fontSize: 12, whiteSpace: "nowrap" }}>
                     {new Date(item.created_at + "Z").toLocaleString("zh-CN")}
+                  </Text>
+                  <Text type="secondary" style={{ fontSize: 12, whiteSpace: "nowrap" }}>
+                    {formatDuration(item.created_at, item.completed_at)}
                   </Text>
                 </div>
               </List.Item>

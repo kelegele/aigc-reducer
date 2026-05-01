@@ -11,6 +11,7 @@ export const TASK_STATUS = {
   FINALIZING: "finalizing",
   COMPLETED: "completed",
   FAILED: "failed",
+  CANCELLED: "cancelled",
 } as const;
 
 export type TaskStatus = (typeof TASK_STATUS)[keyof typeof TASK_STATUS];
@@ -25,6 +26,7 @@ export const TASK_STATUS_LABELS: Record<string, string> = {
   [TASK_STATUS.FINALIZING]: "生成中",
   [TASK_STATUS.COMPLETED]: "已完成",
   [TASK_STATUS.FAILED]: "失败",
+  [TASK_STATUS.CANCELLED]: "已停止",
 };
 
 /** 风险等级 */

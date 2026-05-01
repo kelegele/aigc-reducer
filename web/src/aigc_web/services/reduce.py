@@ -541,6 +541,22 @@ class ReduceService:
         logger.info("[finalize] task=%s done: %d paragraphs", task_id[:8], len(paragraphs))
         return task
 
+    # ── 取消任务 ──
+
+    def cancel_task(self, task_id: str) -> ReductionTask:
+        """取消进行中的任务，不可恢复。"""
+        task = self._get_task(task_id)
+        terminal_states = ("completed", "failed", "cancelled")
+        if task.status in terminal_states:
+            raise ValueError(f"任务已结束，无法取消: {task.status}")
+        prev_status = task.status
+        task.status = "cancelled"
+        task.completed_at = datetime.now()
+        self.db.commit()
+        self.db.refresh(task)
+        logger.info("[cancel] task=%s cancelled from status=%s", task_id[:8], prev_status)
+        return task
+
     # ── 查询 ──
 
     def get_task(self, task_id: str, user_id: int) -> ReductionTask:
@@ -570,7 +586,7 @@ class ReduceService:
         )
         if status == "in_progress":
             query = query.filter(
-                ReductionTask.status.notin_(["completed", "failed"])
+                ReductionTask.status.notin_(["completed", "failed", "cancelled"])
             )
         elif status:
             query = query.filter_by(status=status)

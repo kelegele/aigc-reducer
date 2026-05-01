@@ -159,6 +159,12 @@ export async function finalizeTask(taskId: number): Promise<TaskResponse> {
   return resp.data;
 }
 
+/** 取消任务 */
+export async function cancelTask(taskId: string): Promise<TaskResponse> {
+  const resp = await client.post<TaskResponse>(`/reduce/tasks/${taskId}/cancel`);
+  return resp.data;
+}
+
 /** 导出任务结果 */
 export function getExportUrl(taskId: string, format: "markdown" | "docx" = "markdown"): string {
   return `/api/reduce/tasks/${taskId}/export?format=${format}`;

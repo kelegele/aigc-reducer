@@ -18,8 +18,9 @@ import {
 } from "antd";
 import {
   PlusCircleOutlined,
+  StopOutlined,
 } from "@ant-design/icons";
-import { getTasks, type TaskListItem } from "../api/reduce";
+import { cancelTask, getTasks, type TaskListItem } from "../api/reduce";
 import {
   TASK_STATUS,
   TASK_STATUS_LABELS,
@@ -62,7 +63,7 @@ function formatDuration(created: string, completed: string | null): string {
 export default function History() {
   const navigate = useNavigate();
   const { token: themeToken } = theme.useToken();
-  const { message } = AntApp.useApp();
+  const { message, modal } = AntApp.useApp();
 
   const [tasks, setTasks] = useState<TaskListItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -108,7 +109,7 @@ export default function History() {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <Title level={4} style={{ margin: 0 }}>检测历史</Title>
+        <Title level={4} style={{ margin: 0 }}>检测记录</Title>
         <Button
           type="primary"
           icon={<PlusCircleOutlined />}
@@ -156,7 +157,9 @@ export default function History() {
               size: "small",
               style: { textAlign: "center", marginTop: 16 },
             }}
-            renderItem={(item) => (
+            renderItem={(item) => {
+                const isInProgress = !["completed", "failed", "cancelled"].includes(item.status);
+                return (
               <List.Item
                 style={{
                   cursor: "pointer",
@@ -196,9 +199,39 @@ export default function History() {
                   <Text type="secondary" style={{ fontSize: 12, whiteSpace: "nowrap" }}>
                     {item.total_credits} 积分
                   </Text>
+                  {isInProgress && (
+                    <Button
+                      size="small"
+                      danger
+                      icon={<StopOutlined />}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        modal.confirm({
+                          title: "确认停止任务",
+                          content: "停止后任务将无法恢复，确认停止吗？",
+                          okText: "确认停止",
+                          okType: "danger",
+                          cancelText: "取消",
+                          onOk: async () => {
+                            try {
+                              await cancelTask(item.id);
+                              message.success("任务已停止");
+                              loadTasks();
+                            } catch (err: unknown) {
+                              const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+                              message.error(detail || "停止失败");
+                            }
+                          },
+                        });
+                      }}
+                    >
+                      停止
+                    </Button>
+                  )}
                 </div>
               </List.Item>
-            )}
+              );
+            }}
           />
         )}
       </Spin>

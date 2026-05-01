@@ -213,6 +213,22 @@ def finalize_task(
     return _task_to_response(task)
 
 
+@reduce_router.post("/tasks/{task_id}/cancel", response_model=TaskResponse)
+def cancel_task(
+    task_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_current_user),
+):
+    """取消进行中的任务，不可恢复。"""
+    service = ReduceService(db)
+    service.get_task(task_id, current_user.id)
+    try:
+        task = service.cancel_task(task_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    return _task_to_response(task)
+
+
 @reduce_router.get("/tasks/{task_id}/export")
 def export_task(
     task_id: str,
