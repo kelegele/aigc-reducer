@@ -1,9 +1,11 @@
 """CLI 入口 — 实现完整的 6 步交互流程。"""
 
+import logging
 import sys
 import os
 import shutil
 import tempfile
+from logging.handlers import TimedRotatingFileHandler
 from typing import Dict, List, Optional
 from rich.console import Console
 from rich.prompt import Prompt, Confirm
@@ -21,6 +23,43 @@ from aigc_reducer.report import (
 )
 
 console = Console()
+logger = logging.getLogger(__name__)
+
+
+def _setup_logging() -> None:
+    """配置日志：同时输出到 stdout 和 cli/logs/ 目录，每天轮转。"""
+    log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "logs")
+    log_dir = os.path.normpath(log_dir)
+    os.makedirs(log_dir, exist_ok=True)
+
+    fmt = logging.Formatter(
+        "%(asctime)s %(levelname)-7s [%(name)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
+    root = logging.getLogger()
+    root.setLevel(logging.INFO)
+
+    if not root.handlers:
+        sh = logging.StreamHandler()
+        sh.setFormatter(fmt)
+        root.addHandler(sh)
+
+    fh = TimedRotatingFileHandler(
+        os.path.join(log_dir, "app.log"),
+        when="midnight",
+        backupCount=30,
+        encoding="utf-8",
+    )
+    fh.setFormatter(fmt)
+    root.addHandler(fh)
+
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+
+    logger.info("Logging initialized: logs dir = %s", os.path.abspath(log_dir))
+
+
+_setup_logging()
 
 # 工作目录结构
 WORKSPACE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "aigc-reducer")

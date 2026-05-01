@@ -1,6 +1,8 @@
 """改写引擎主入口 — 管理风格实例，调度改写任务。"""
 
+import logging
 import threading
+import time
 from typing import Dict, List
 
 from aigc_reducer_core import CancelledError
@@ -15,6 +17,7 @@ from aigc_reducer_core.styles import (
 from aigc_reducer_core.styles.base import RewriteStyle
 from aigc_reducer_core.llm_client import LLMClient
 
+logger = logging.getLogger(__name__)
 
 STYLE_MAP = {
     "口语化": ColloquialStyle,
@@ -69,7 +72,12 @@ class Rewriter:
                 rewritten.append(para)
                 continue
 
+            t0 = time.time()
             new_text = self.style.rewrite_paragraph(para.text, det_result)
+            logger.info(
+                "[rewrite_all] para %d: %d→%d chars, style=%s, elapsed=%.1fs",
+                i, len(para.text), len(new_text), self.style_name, time.time() - t0,
+            )
             rewritten.append(Paragraph(
                 text=new_text,
                 index=para.index,
@@ -87,7 +95,14 @@ class Rewriter:
         detection_result: Dict,
         conservative: bool = False,
     ) -> str:
+        t0 = time.time()
+        mode = "conservative" if conservative else "aggressive"
         if conservative:
-            return self.style.rewrite_paragraph_conservative(text, detection_result)
+            result = self.style.rewrite_paragraph_conservative(text, detection_result)
         else:
-            return self.style.rewrite_paragraph(text, detection_result)
+            result = self.style.rewrite_paragraph(text, detection_result)
+        logger.info(
+            "[rewrite_single] %s: %d→%d chars, style=%s, elapsed=%.1fs",
+            mode, len(text), len(result), self.style_name, time.time() - t0,
+        )
+        return result

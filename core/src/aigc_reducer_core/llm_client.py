@@ -27,9 +27,13 @@
   # 智谱，API key 从智谱开放平台获取
 """
 
+import logging
 import os
+import time
 
 from litellm import completion
+
+logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = (
     "你是一个专业的学术论文改写助手。"
@@ -69,7 +73,7 @@ class LLMClient:
           LLM_MODEL    — 模型标识，格式 "供应商/模型名"
           LLM_API_KEY  — API 密钥
         可选：
-          LLM_BASE_URL — 自定义 API 端点，不配置则使用供应商默认值
+          LLM_BASE_URL — 自定义 API 端点，不配置则根据供应商默认值
         """
         model = os.environ.get("LLM_MODEL")
         if not model:
@@ -110,5 +114,25 @@ class LLMClient:
         if self._base_url:
             kwargs["api_base"] = self._base_url
 
-        response = completion(**kwargs)
-        return response.choices[0].message.content.strip()
+        t0 = time.time()
+        prompt_len = len(prompt)
+        try:
+            response = completion(**kwargs)
+            result = response.choices[0].message.content.strip()
+            elapsed = time.time() - t0
+            usage = getattr(response, "usage", None)
+            usage_info = ""
+            if usage:
+                usage_info = f" in={usage.prompt_tokens} out={usage.completion_tokens}"
+            logger.info(
+                "[LLM] model=%s prompt=%d chars%s result=%d chars elapsed=%.1fs",
+                self._model, prompt_len, usage_info, len(result), elapsed,
+            )
+            return result
+        except Exception as e:
+            elapsed = time.time() - t0
+            logger.error(
+                "[LLM] model=%s prompt=%d chars FAILED after %.1fs: %s",
+                self._model, prompt_len, elapsed, e,
+            )
+            raise

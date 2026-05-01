@@ -2,7 +2,9 @@
 """FastAPI 应用入口。"""
 
 import logging
+import os
 from contextlib import asynccontextmanager
+from logging.handlers import TimedRotatingFileHandler
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI
@@ -17,6 +19,48 @@ from aigc_web.routers import reduce as reduce_router
 from aigc_web.services import payment as payment_service
 
 logger = logging.getLogger(__name__)
+
+
+def _setup_logging() -> None:
+    """配置日志：同时输出到 stdout 和 logs/ 目录，每天轮转。"""
+    log_dir = os.path.join(os.path.dirname(__file__), "..", "..", "logs")
+    os.makedirs(log_dir, exist_ok=True)
+
+    fmt = logging.Formatter(
+        "%(asctime)s %(levelname)-7s [%(name)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
+    # root logger：所有模块的日志都会经过这里
+    root = logging.getLogger()
+    root.setLevel(logging.INFO)
+
+    # 避免重复添加 handler（uvicorn --workers 会 fork）
+    if not root.handlers:
+        # stdout
+        sh = logging.StreamHandler()
+        sh.setFormatter(fmt)
+        root.addHandler(sh)
+
+    # 文件：每天轮转，保留 30 天
+    fh = TimedRotatingFileHandler(
+        os.path.join(log_dir, "app.log"),
+        when="midnight",
+        backupCount=30,
+        encoding="utf-8",
+    )
+    fh.setFormatter(fmt)
+    root.addHandler(fh)
+
+    # 降低第三方库日志级别
+    logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+    logging.getLogger("apscheduler").setLevel(logging.WARNING)
+    logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+
+    logger.info("Logging initialized: logs dir = %s", os.path.abspath(log_dir))
+
+
+_setup_logging()
 
 
 def _close_expired_orders_job() -> None:
