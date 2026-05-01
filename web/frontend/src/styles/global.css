@@ -1,4 +1,42 @@
 /* web/frontend/src/styles/global.css */
+
+/* ── 全局滚动条美化 ── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 120, 120, 0.3) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(120, 120, 120, 0.3);
+  border-radius: 3px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(120, 120, 120, 0.5);
+}
+
+/* 活动日志滚动条更紧凑 */
+.activity-log::-webkit-scrollbar {
+  width: 4px;
+}
+
+.activity-log {
+  scrollbar-width: none;
+}
+
+.activity-log:hover {
+  scrollbar-width: thin;
+}
+
 /* 移动端导航菜单适配 */
 @media (max-width: 768px) {
   .ant-menu-horizontal {
