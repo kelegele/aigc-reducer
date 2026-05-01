@@ -408,7 +408,7 @@ export default function TaskWorkspace() {
           setRewriteCurrent(current);
           setRewriteTotal(total);
           if (total > 0) setRewriteProgress(Math.round((current / total) * 100));
-          appendLog(`正在改写第 ${current}/${total} 段，生成方案 A（激进）和方案 B（保守）…`);
+          appendLog(`正在为第 ${current}/${total} 段生成改写方案 A（激进）和方案 B（保守）…`);
         } else if (data.type === "paragraph_ready") {
           const idx = Number(data.index ?? 0);
           const aggressive = String(data.aggressive ?? "");
@@ -805,7 +805,7 @@ export default function TaskWorkspace() {
             style={{ maxWidth: 400, margin: "0 auto 12px" }}
           />
           <Text type="secondary">
-            正在改写 {rewriteCurrent}/{rewriteTotal} 段...
+            正在生成改写方案 {rewriteCurrent}/{rewriteTotal} 段...
           </Text>
           {activityLog.length > 0 && (
             <div
