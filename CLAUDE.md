@@ -344,6 +344,24 @@ _CONFIG_MAP = {
 
 **原因**：`.env` 设置 `DEV_BYPASS_PHONE=true` 后，SMS 测试全部失败 — `verify()` 跳过了验证码校验逻辑，导致错误码、过期码、不存在的手机号全部通过验证。
 
+### HTTP 响应头含非 ASCII 内容必须用 RFC 5987 编码
+
+任何写入 HTTP header 的用户数据（文件名、备注等）若可能含中文或其他非 ASCII 字符，**必须** URL 编码后用 `filename*=UTF-8''<encoded>` 格式，禁止直接放进 `filename="..."`。
+
+```python
+import urllib.parse
+
+filename = f"{task.title[:50] or 'result'}.docx"
+encoded_name = urllib.parse.quote(filename)
+return Response(
+    content=buf.read(),
+    media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_name}"},
+)
+```
+
+**原因**：HTTP header 仅支持 latin-1 编码，中文字符直接塞进 `filename="..."` 会触发 `UnicodeEncodeError: 'latin-1' codec can't encode characters` 导致 500 错误。RFC 5987 的 `filename*=UTF-8''<urlencoded>` 是浏览器统一支持的非 ASCII 文件名规范。
+
 ## Web Service (from `web/` directory)
 
 ### Tech Stack

@@ -4,6 +4,7 @@
 import json as _json_module
 import os
 import tempfile
+import urllib.parse
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
@@ -226,19 +227,21 @@ def export_task(
 
         buf = export_docx(task)
         filename = f"{task.title[:50] or 'result'}.docx"
+        encoded_name = urllib.parse.quote(filename)
         return Response(
             content=buf.read(),
             media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+            headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_name}"},
         )
 
     # 默认 markdown
     content = task.reduced_text or ""
     filename = f"{task.title[:50] or 'result'}.md"
+    encoded_name = urllib.parse.quote(filename)
     return Response(
         content=content.encode("utf-8"),
         media_type="text/markdown; charset=utf-8",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_name}"},
     )
 
 
