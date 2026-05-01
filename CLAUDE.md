@@ -9,7 +9,7 @@ AIGC Reducer — 降低学术论文 AIGC 查重率的 CLI 工具 + Web 服务。
 ## gstack
 
 - 所有网页浏览必须使用 `/browse` skill（来自 gstack），**禁止使用 `mcp__claude-in-chrome__*` 工具**
-- 可用 skills：`/browse`、`/qa`、`/qa-only`、`/design-review`、`/connect-chrome`、`/setup-browser-cookies`
+- 可用 skills：`/browse`、`/qa`、`/qa-only`、`/design-review`、`/connect-chrome`、`/setup-browser-cookies`、`/investigate`、`/ship`、`/autoplan`、`/review`、`/canary`、`/context-save`、`/context-restore`、`/retro`
 
 ### 前端 UI 测试（/browse）
 
@@ -23,6 +23,22 @@ $B screenshot /tmp/x.png  # 截图证据
 $B js "..."               # 执行 JS 检查 DOM
 $B html ".selector"       # 获取 HTML 结构
 ```
+
+### 适用 Skills 场景
+
+| 场景 | Skill | 说明 |
+|------|-------|------|
+| 前端 UI 验证 | `/browse` | 导航 → snapshot → inspect → 截图 |
+| 改完前端找 bug | `/qa` | 系统化 QA 测试 + 自动修复 |
+| 只报 bug 不修 | `/qa-only` | 出 bug 报告不自动改 |
+| UI 视觉审计 | `/design-review` | 找视觉不一致、间距、层级问题 |
+| 疑难 bug 排查 | `/investigate` | 4 阶段系统化定位根因 |
+| 完整发版 | `/ship` | 检测分支 → 测试 → review → bump → PR |
+| 新功能规划 | `/autoplan` | 一次跑完 CEO/Eng/Design/DevEx 全部 review |
+| 代码审查 | `/review` | PR landing 前自动审查 |
+| 上线后监控 | `/canary` | 金丝雀监控（控制台错误、视觉回归） |
+| 保存/恢复工作上下文 | `/context-save` / `/context-restore` | 切换任务时保存进度 |
+| 周度回顾 | `/retro` | 分析 commit 历史、工作模式 |
 
 ## Monorepo Structure
 
