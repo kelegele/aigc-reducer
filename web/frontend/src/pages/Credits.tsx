@@ -21,7 +21,7 @@ export default function Credits() {
           {
             key: "balance",
             label: "余额概览",
-            children: <Balance onGoPackages={() => setActiveTab("packages")} />,
+            children: <Balance onGoPackages={() => setActiveTab("packages")} onGoHistory={() => setActiveTab("history")} />,
           },
           {
             key: "packages",

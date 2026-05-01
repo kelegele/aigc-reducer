@@ -8,9 +8,10 @@ const { Text } = Typography;
 
 interface BalanceProps {
   onGoPackages: () => void;
+  onGoHistory: () => void;
 }
 
-export default function Balance({ onGoPackages }: BalanceProps) {
+export default function Balance({ onGoPackages, onGoHistory }: BalanceProps) {
   const { balance, transactions, fetchBalance, fetchTransactions } =
     useCreditsStore();
 
@@ -47,9 +48,14 @@ export default function Balance({ onGoPackages }: BalanceProps) {
         title="最近流水"
         style={{ marginTop: 16 }}
         extra={
-          <Button type="link" onClick={onGoPackages}>
-            充值积分
-          </Button>
+          <>
+            <Button type="link" onClick={onGoPackages}>
+              充值积分
+            </Button>
+            <Button type="link" size="small" onClick={onGoHistory}>
+              查看全部
+            </Button>
+          </>
         }
       >
         {transactions && transactions.items.length > 0 ? (
