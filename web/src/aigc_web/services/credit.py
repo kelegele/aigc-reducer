@@ -53,6 +53,8 @@ def consume(
     remark: str | None = None,
 ) -> int:
     """消费积分。按 token_count / 1000 * CREDITS_PER_1K_TOKENS 扣减。返回消耗积分数。"""
+    if settings.CREDITS_PER_1K_TOKENS <= 0:
+        raise ValueError("系统未配置积分汇率（CREDITS_PER_1K_TOKENS），请联系管理员")
     cost = max(1, int(token_count / 1000 * settings.CREDITS_PER_1K_TOKENS))
     account = db.query(CreditAccount).filter_by(user_id=user_id).with_for_update().one()
 

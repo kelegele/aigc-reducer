@@ -35,14 +35,21 @@ services:
       SMS_ACCESS_SECRET: ${SMS_ACCESS_SECRET:-}
       SMS_SIGN_NAME: ${SMS_SIGN_NAME:-}
       SMS_TEMPLATE_CODE: ${SMS_TEMPLATE_CODE:-}
-      CORS_ORIGINS: '["https://${DOMAIN:-localhost}"]'
-      SITE_URL: https://${DOMAIN:-localhost}
+      CORS_ORIGINS: '["${SITE_URL:-http://localhost}"]'
+      SITE_URL: ${SITE_URL:-http://localhost}
+      BACKEND_PORT: 9000
+      # LLM 配置（P3 检测/改写）
+      LLM_MODEL: ${LLM_MODEL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      # 积分配置（CREDITS_PER_1K_TOKENS 必须在管理后台配置，不设默认值）
       NEW_USER_BONUS_CREDITS: ${NEW_USER_BONUS_CREDITS:-0}
-      CREDITS_PER_TOKEN: ${CREDITS_PER_TOKEN:-1.0}
+      # 支付宝
       ALIPAY_APP_ID: ${ALIPAY_APP_ID:-}
       ALIPAY_PRIVATE_KEY: ${ALIPAY_PRIVATE_KEY:-}
       ALIPAY_PUBLIC_KEY: ${ALIPAY_PUBLIC_KEY:-}
       ORDER_TIMEOUT_MINUTES: ${ORDER_TIMEOUT_MINUTES:-15}
+      # 超管
       ADMIN_PHONE: ${ADMIN_PHONE:-}
     command: >
       sh -c "uv run alembic upgrade head &&

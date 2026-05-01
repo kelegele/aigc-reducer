@@ -734,6 +734,8 @@ class ReduceService:
 
     @staticmethod
     def _tokens_to_credits(token_count: int) -> int:
+        if settings.CREDITS_PER_1K_TOKENS <= 0:
+            raise ValueError("系统未配置积分汇率（CREDITS_PER_1K_TOKENS），请联系管理员")
         return max(1, int(token_count / 1000 * settings.CREDITS_PER_1K_TOKENS))
 
 

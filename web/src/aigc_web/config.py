@@ -30,7 +30,7 @@ class Settings(BaseSettings):
 
     # 积分配置
     NEW_USER_BONUS_CREDITS: int = 0
-    CREDITS_PER_1K_TOKENS: float = 1.0  # 每 1000 Token 消耗积分数
+    CREDITS_PER_1K_TOKENS: float = 0.0  # 必须在管理后台配置，不设默认值
 
     # LLM 配置（P3 检测/改写）
     LLM_MODEL: str = ""
