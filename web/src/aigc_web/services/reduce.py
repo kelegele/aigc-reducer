@@ -7,6 +7,7 @@ import json
 import logging
 import threading
 import time
+from datetime import datetime
 from typing import AsyncGenerator
 
 from sqlalchemy.orm import Session
@@ -534,6 +535,7 @@ class ReduceService:
             p.final_text for p in sorted_paras if p.final_text
         )
         task.status = "completed"
+        task.completed_at = datetime.now()
         self.db.commit()
         self.db.refresh(task)
         logger.info("[finalize] task=%s done: %d paragraphs", task_id[:8], len(paragraphs))
