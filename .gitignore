@@ -7,3 +7,4 @@ cli/output/
 cli/raw-paper/
 .DS_Store
 .gstack/
+logs/
