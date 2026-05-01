@@ -17,6 +17,7 @@ dependencies = [
     "python-multipart>=0.0.26",
     "apscheduler>=3.11.2",
     "aigc-reducer-core",
+    "python-docx>=1.2.0",
 ]
 
 [project.optional-dependencies]
