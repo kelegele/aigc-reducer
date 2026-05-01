@@ -1,6 +1,6 @@
 // web/frontend/src/pages/reduce/TaskWorkspace.tsx
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   App as AntApp,
   Button,
@@ -43,6 +43,7 @@ import {
   type TaskResponse,
   getExportUrl,
 } from "../../api/reduce";
+import { getAdminTask } from "../../api/admin";
 import {
   TASK_STATUS,
   TASK_STATUS_LABELS,
@@ -81,6 +82,8 @@ function riskTagColor(level: string): string {
 export default function TaskWorkspace() {
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isAdminMode = location.pathname.startsWith("/admin");
   const { token: themeToken } = theme.useToken();
   const { message, modal } = AntApp.useApp();
 
@@ -117,7 +120,8 @@ export default function TaskWorkspace() {
   const [resultTask, setResultTask] = useState<TaskResponse | null>(null);
 
   // ---- 只读模式 ----
-  const isReadonly = task ? [TASK_STATUS.COMPLETED, TASK_STATUS.FAILED].includes(task.status as typeof TASK_STATUS.COMPLETED) : false;
+  const isCancelled = task ? task.status === TASK_STATUS.CANCELLED : false;
+  const isReadonly = task ? [TASK_STATUS.COMPLETED, TASK_STATUS.FAILED, TASK_STATUS.CANCELLED].includes(task.status as typeof TASK_STATUS.COMPLETED) : false;
 
   // ---- 活动日志（用户可见的实时进度） ----
   const [activityLog, setActivityLog] = useState<string[]>([]);
@@ -146,18 +150,18 @@ export default function TaskWorkspace() {
   const loadTask = useCallback(async () => {
     setLoading(true);
     try {
-      const t = await getTask(taskId);
+      const t = await (isAdminMode ? getAdminTask(taskId) : getTask(taskId));
       setTask(t);
       // 根据状态确定当前步骤
       syncStepFromStatus(t);
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
       message.error(detail || "加载任务失败");
-      navigate("/dashboard");
+      navigate(isAdminMode ? "/admin/content" : "/dashboard");
     } finally {
       setLoading(false);
     }
-  }, [taskId, message, navigate]);
+  }, [taskId, message, navigate, isAdminMode]);
 
   const syncStepFromStatus = useCallback((t: TaskResponse) => {
     switch (t.status) {
@@ -181,6 +185,14 @@ export default function TaskWorkspace() {
         break;
       case TASK_STATUS.FAILED:
         // 保持当前步骤，显示错误
+        break;
+      case TASK_STATUS.CANCELLED:
+        // 根据段落数据确定停在哪个步骤
+        const anyRewrite = t.paragraphs.some(p => p.rewrite_aggressive || p.rewrite_conservative);
+        const anyDetection = t.paragraphs.some(p => p.risk_level);
+        if (anyRewrite) setCurrentStep(3);
+        else if (anyDetection) setCurrentStep(1);
+        else setCurrentStep(0);
         break;
       default:
         setCurrentStep(0);
@@ -617,8 +629,8 @@ export default function TaskWorkspace() {
     return (
       <div style={{ textAlign: "center", padding: "120px 0" }}>
         <Empty description="任务不存在" />
-        <Button type="primary" onClick={() => navigate("/dashboard")} style={{ marginTop: 16 }}>
-          返回仪表盘
+        <Button type="primary" onClick={() => navigate(isAdminMode ? "/admin/content" : "/dashboard")} style={{ marginTop: 16 }}>
+          {isAdminMode ? "返回内容管理" : "返回仪表盘"}
         </Button>
       </div>
     );
@@ -723,7 +735,7 @@ export default function TaskWorkspace() {
       </Card>
 
       {/* 检测完成后操作按钮 */}
-      {!detecting && task.status === TASK_STATUS.DETECTED && (
+      {!detecting && task.status === TASK_STATUS.DETECTED && !isReadonly && (
         <Card>
           <Space>
             <Button
@@ -837,46 +849,48 @@ export default function TaskWorkspace() {
       );
     }
 
-    // 审阅模式
-    if (task.status === TASK_STATUS.REWRITTEN || (paragraphsNeedingReview.length > 0 && !rewriting)) {
+    // 审阅模式（含已停止任务）
+    if (task.status === TASK_STATUS.REWRITTEN || (paragraphsNeedingReview.length > 0 && !rewriting) || isCancelled) {
       return (
         <div>
           {/* 工具栏 */}
-          <Card size="small" style={{ marginBottom: 16 }}>
-            <Space>
-              <Radio.Group
-                value={viewMode}
-                onChange={(e) => setViewMode(e.target.value)}
-                optionType="button"
-                buttonStyle="solid"
-                size="small"
-              >
-                <Radio.Button value="list">
-                  <UnorderedListOutlined /> 列表模式
-                </Radio.Button>
-                <Radio.Button value="wizard">
-                  <OrderedListOutlined /> 向导模式
-                </Radio.Button>
-              </Radio.Group>
-              {viewMode === "list" && (
-                <>
-                  <Tooltip title={expandedCards.size === paragraphsNeedingReview.length ? "全部收起" : "全部展开"}>
-                    <Button
-                      size="small"
-                      icon={expandedCards.size === paragraphsNeedingReview.length ? <ShrinkOutlined /> : <ExpandAltOutlined />}
-                      onClick={toggleExpandAll}
-                    />
-                  </Tooltip>
-                  <Button size="small" onClick={() => handleBatchChoice(PARAGRAPH_CHOICE.AGGRESSIVE)}>
-                    全选方案 A（激进）
-                  </Button>
-                  <Button size="small" onClick={() => handleBatchChoice(PARAGRAPH_CHOICE.CONSERVATIVE)}>
-                    全选方案 B（保守）
-                  </Button>
-                </>
-              )}
-            </Space>
-          </Card>
+          {!isReadonly && (
+            <Card size="small" style={{ marginBottom: 16 }}>
+              <Space>
+                <Radio.Group
+                  value={viewMode}
+                  onChange={(e) => setViewMode(e.target.value)}
+                  optionType="button"
+                  buttonStyle="solid"
+                  size="small"
+                >
+                  <Radio.Button value="list">
+                    <UnorderedListOutlined /> 列表模式
+                  </Radio.Button>
+                  <Radio.Button value="wizard">
+                    <OrderedListOutlined /> 向导模式
+                  </Radio.Button>
+                </Radio.Group>
+                {viewMode === "list" && (
+                  <>
+                    <Tooltip title={expandedCards.size === paragraphsNeedingReview.length ? "全部收起" : "全部展开"}>
+                      <Button
+                        size="small"
+                        icon={expandedCards.size === paragraphsNeedingReview.length ? <ShrinkOutlined /> : <ExpandAltOutlined />}
+                        onClick={toggleExpandAll}
+                      />
+                    </Tooltip>
+                    <Button size="small" onClick={() => handleBatchChoice(PARAGRAPH_CHOICE.AGGRESSIVE)}>
+                      全选方案 A（激进）
+                    </Button>
+                    <Button size="small" onClick={() => handleBatchChoice(PARAGRAPH_CHOICE.CONSERVATIVE)}>
+                      全选方案 B（保守）
+                    </Button>
+                  </>
+                )}
+              </Space>
+            </Card>
+          )}
 
           {/* 列表模式 */}
           {viewMode === "list" && renderListMode()}
@@ -885,7 +899,7 @@ export default function TaskWorkspace() {
           {viewMode === "wizard" && renderWizardMode()}
 
           {/* 生成最终文档 */}
-          {allConfirmed && (
+          {allConfirmed && !isReadonly && (
             <Card style={{ textAlign: "center", marginTop: 16, padding: 16 }}>
               <Button
                 type="primary"
@@ -985,10 +999,12 @@ export default function TaskWorkspace() {
                 <Radio.Group
                   value={choice ?? null}
                   onChange={(e) => {
+                    if (isReadonly) return;
                     const selected = e.target.value as ParagraphChoice;
                     setParagraphChoices((prev) => new Map(prev).set(p.index, selected));
                   }}
                   style={{ width: "100%" }}
+                  disabled={isReadonly}
                 >
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     {/* 方案 A */}
@@ -1071,7 +1087,7 @@ export default function TaskWorkspace() {
                       <Radio value={PARAGRAPH_CHOICE.MANUAL} disabled={confirmed && choice !== PARAGRAPH_CHOICE.MANUAL}>
                         <Text strong>手动输入</Text>
                       </Radio>
-                      {choice === PARAGRAPH_CHOICE.MANUAL && !confirmed && (
+                      {choice === PARAGRAPH_CHOICE.MANUAL && !confirmed && !isReadonly && (
                         <div style={{ marginTop: 8 }}>
                           <TextArea
                             rows={4}
@@ -1101,7 +1117,7 @@ export default function TaskWorkspace() {
         );
       })}
       {/* 全部已选择后显示统一提交按钮 */}
-      {paragraphsNeedingReview.length > 0 &&
+      {paragraphsNeedingReview.length > 0 && !isReadonly &&
         paragraphsNeedingReview.every((p) => paragraphChoices.has(p.index) || p.user_choice) &&
         !paragraphsNeedingReview.every((p) => !!p.user_choice) && (
         <Card style={{ textAlign: "center", padding: 16 }}>
@@ -1192,7 +1208,8 @@ export default function TaskWorkspace() {
                     cursor: confirmed ? "default" : "pointer",
                   }}
                   onClick={() => {
-                    if (!confirmed) setParagraphChoices((prev) => new Map(prev).set(p.index, PARAGRAPH_CHOICE.AGGRESSIVE));
+                    if (isReadonly || confirmed) return;
+                    setParagraphChoices((prev) => new Map(prev).set(p.index, PARAGRAPH_CHOICE.AGGRESSIVE));
                   }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
@@ -1225,7 +1242,8 @@ export default function TaskWorkspace() {
                     cursor: confirmed ? "default" : "pointer",
                   }}
                   onClick={() => {
-                    if (!confirmed) setParagraphChoices((prev) => new Map(prev).set(p.index, PARAGRAPH_CHOICE.CONSERVATIVE));
+                    if (isReadonly || confirmed) return;
+                    setParagraphChoices((prev) => new Map(prev).set(p.index, PARAGRAPH_CHOICE.CONSERVATIVE));
                   }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
@@ -1251,7 +1269,7 @@ export default function TaskWorkspace() {
                   <Button
                     size="small"
                     onClick={() => setParagraphChoices((prev) => new Map(prev).set(p.index, PARAGRAPH_CHOICE.ORIGINAL))}
-                    disabled={confirmed}
+                    disabled={isReadonly || confirmed}
                     type={choice === PARAGRAPH_CHOICE.ORIGINAL ? "primary" : "default"}
                   >
                     保留原文
@@ -1261,13 +1279,13 @@ export default function TaskWorkspace() {
                     onClick={() => {
                       setParagraphChoices((prev) => new Map(prev).set(p.index, PARAGRAPH_CHOICE.MANUAL));
                     }}
-                    disabled={confirmed}
+                    disabled={isReadonly || confirmed}
                     type={choice === PARAGRAPH_CHOICE.MANUAL ? "primary" : "default"}
                   >
                     手动输入
                   </Button>
                 </Space>
-                {choice === PARAGRAPH_CHOICE.MANUAL && !confirmed && (
+                {choice === PARAGRAPH_CHOICE.MANUAL && !confirmed && !isReadonly && (
                   <div style={{ marginTop: 8 }}>
                     <TextArea
                       rows={3}
@@ -1297,14 +1315,14 @@ export default function TaskWorkspace() {
         <div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 16 }}>
           <Button
             icon={<LeftOutlined />}
-            disabled={wizardIndex === 0}
+            disabled={isReadonly || wizardIndex === 0}
             onClick={() => setWizardIndex((i) => Math.max(0, i - 1))}
           >
             上一段
           </Button>
           {wizardIndex === paragraphsNeedingReview.length - 1 &&
             paragraphsNeedingReview.every((pp) => paragraphChoices.has(pp.index) || pp.user_choice) &&
-            !paragraphsNeedingReview.every((pp) => !!pp.user_choice) && (
+            !paragraphsNeedingReview.every((pp) => !!pp.user_choice) && !isReadonly && (
             <Button
               type="primary"
               loading={confirmingIndex !== null}
@@ -1321,7 +1339,7 @@ export default function TaskWorkspace() {
           )}
           <Button
             icon={<RightOutlined />}
-            disabled={wizardIndex >= paragraphsNeedingReview.length - 1}
+            disabled={isReadonly || wizardIndex >= paragraphsNeedingReview.length - 1}
             onClick={() =>
               setWizardIndex((i) => Math.min(paragraphsNeedingReview.length - 1, i + 1))
             }
@@ -1560,16 +1578,20 @@ export default function TaskWorkspace() {
           color={
             task.status === TASK_STATUS.COMPLETED
               ? "success"
-              : [TASK_STATUS.DETECTING, TASK_STATUS.RECONSTRUCTING, TASK_STATUS.REWRITING, TASK_STATUS.FINALIZING].includes(task.status)
-                ? "processing"
-                : "default"
+              : task.status === TASK_STATUS.FAILED
+                ? "error"
+                : task.status === TASK_STATUS.CANCELLED
+                  ? "warning"
+                  : [TASK_STATUS.DETECTING, TASK_STATUS.RECONSTRUCTING, TASK_STATUS.REWRITING, TASK_STATUS.FINALIZING].includes(task.status)
+                    ? "processing"
+                    : "default"
           }
         >
           {TASK_STATUS_LABELS[task.status] ?? task.status}
         </Tag>
       </div>
 
-      <Steps current={currentStep} items={steps} size="small" style={{ marginBottom: 24, ...(isReadonly ? { display: "none" } : {}) }} />
+      <Steps current={currentStep} items={isCancelled ? steps.map(s => ({ ...s, status: "wait" as const })) : steps} size="small" style={{ marginBottom: 24, ...((isReadonly && !isCancelled) ? { display: "none" } : {}) }} />
 
       {isReadonly && task.status === TASK_STATUS.FAILED && (
         <Card style={{ marginBottom: 16, textAlign: "center" }}>
@@ -1583,10 +1605,33 @@ export default function TaskWorkspace() {
         </Card>
       )}
 
+      {isCancelled && currentStep > 0 && (
+        <Card style={{ marginBottom: 16, textAlign: "center", borderColor: themeToken.colorBorder }}>
+          <ExclamationCircleOutlined style={{ fontSize: 36, color: themeToken.colorTextQuaternary, marginBottom: 12 }} />
+          <Title level={5} type="secondary">该任务已停止</Title>
+          <Text type="secondary">任务已被停止，以下是已完成的结果，无法进行任何操作。</Text>
+          <div style={{ marginTop: 16 }}>
+            <Button type="primary" onClick={() => navigate(isAdminMode ? "/admin/content" : "/reduce/new")}>新建任务</Button>
+            <Button style={{ marginLeft: 8 }} onClick={() => navigate(-1)}>返回</Button>
+          </div>
+        </Card>
+      )}
+
       {currentStep === 0 && (
-        <div style={{ textAlign: "center", padding: "80px 0" }}>
-          <Spin size="large" tip="解析中..." />
-        </div>
+        isCancelled ? (
+          <Card style={{ textAlign: "center", padding: "80px 0" }}>
+            <ExclamationCircleOutlined style={{ fontSize: 36, color: themeToken.colorTextQuaternary, marginBottom: 12 }} />
+            <Title level={5} type="secondary">该任务已停止</Title>
+            <Text type="secondary">暂无解析出内容</Text>
+            <div style={{ marginTop: 16 }}>
+              <Button onClick={() => navigate(isAdminMode ? "/admin/content" : "/task-list")}>返回检测记录</Button>
+            </div>
+          </Card>
+        ) : (
+          <div style={{ textAlign: "center", padding: "80px 0" }}>
+            <Spin size="large" tip="解析中..." />
+          </div>
+        )
       )}
       {currentStep === 1 && renderDetectStep()}
       {currentStep === 2 && renderReconstructStep()}

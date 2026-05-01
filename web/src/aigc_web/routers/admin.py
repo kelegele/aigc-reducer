@@ -8,9 +8,11 @@ from aigc_web.config import settings
 from aigc_web.database import get_db
 from aigc_web.dependencies import require_admin
 from aigc_web.models.user import User
+from aigc_web.routers.reduce import _task_to_response
 from aigc_web.schemas.admin import (
     AdjustCreditsRequest,
     AdminPackageResponse,
+    AdminTaskListResponse,
     AdminTransactionListResponse,
     ConfigResponse,
     ConfigUpdateRequest,
@@ -22,6 +24,7 @@ from aigc_web.schemas.admin import (
 )
 from aigc_web.schemas.auth import MessageResponse
 from aigc_web.schemas.order import AdminOrderDetail, AdminOrderListResponse
+from aigc_web.schemas.reduce import TaskResponse
 from aigc_web.services import admin as admin_service
 from aigc_web.services import payment as payment_service
 
@@ -175,6 +178,38 @@ def update_config(
         new_user_bonus_credits=req.new_user_bonus_credits,
     )
     return admin_service.get_config(db)
+
+
+# --- 内容管理（检测记录） ---
+
+
+@router.get("/tasks", response_model=AdminTaskListResponse)
+def list_tasks(
+    status: str | None = None,
+    search: str | None = None,
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=100),
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    return admin_service.list_tasks(db, status=status, search=search, page=page, size=size)
+
+
+@router.get("/tasks/{task_id}", response_model=TaskResponse)
+def get_task_detail(
+    task_id: str,
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """管理员查看任意任务的完整详情（段落 + 改写结果）。"""
+    from aigc_web.services.reduce import ReduceService
+
+    service = ReduceService(db)
+    try:
+        task = service.get_task_admin(task_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    return _task_to_response(task)
 
 
 # --- 流水管理 ---

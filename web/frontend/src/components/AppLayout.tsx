@@ -25,6 +25,7 @@ import {
   BulbOutlined,
   EditOutlined,
   MenuOutlined,
+  DatabaseOutlined,
 } from "@ant-design/icons";
 import { useAuthStore } from "../stores/auth";
 import { useThemeStore } from "../stores/theme";
@@ -35,7 +36,7 @@ const { Text } = Typography;
 const getMenuItems = (isAdmin: boolean) => [
   { key: "/dashboard", icon: <DashboardOutlined />, label: "仪表盘" },
   { key: "/reduce/new", icon: <EditOutlined />, label: "检测降重" },
-  { key: "/history", icon: <HistoryOutlined />, label: "检测记录" },
+  { key: "/task-list", icon: <HistoryOutlined />, label: "检测记录" },
   { key: "/credits", icon: <CreditCardOutlined />, label: "积分" },
   { key: "/settings", icon: <SettingOutlined />, label: "设置" },
   ...(isAdmin
@@ -50,6 +51,7 @@ const getMenuItems = (isAdmin: boolean) => [
             { key: "/admin/orders", icon: <FileTextOutlined />, label: "订单管理" },
             { key: "/admin/users", icon: <TeamOutlined />, label: "用户管理" },
             { key: "/admin/transactions", icon: <HistoryOutlined />, label: "流水管理" },
+            { key: "/admin/content", icon: <DatabaseOutlined />, label: "内容管理" },
             { key: "/admin/config", icon: <SettingOutlined />, label: "积分配置" },
           ],
         },

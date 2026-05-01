@@ -570,6 +570,17 @@ class ReduceService:
             raise ValueError("任务不存在")
         return task
 
+    def get_task_admin(self, task_id: str) -> ReductionTask:
+        """管理员获取任意任务（不校验 user_id）。"""
+        task = (
+            self.db.query(ReductionTask)
+            .filter_by(id=task_id)
+            .first()
+        )
+        if not task:
+            raise ValueError("任务不存在")
+        return task
+
     def list_tasks(
         self,
         user_id: int,

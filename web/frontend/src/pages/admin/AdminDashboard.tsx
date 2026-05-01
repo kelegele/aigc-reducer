@@ -5,6 +5,7 @@ import {
   DollarOutlined,
   ThunderboltOutlined,
   RiseOutlined,
+  FileSearchOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -46,8 +47,14 @@ export default function AdminDashboard() {
         </Col>
       </Row>
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-        <Col xs={24} sm={12}>
+        <Col xs={24} sm={12} md={6}>
           <Card><Statistic title="今日新增用户" value={data?.today_new_users ?? 0} prefix={<RiseOutlined />} /></Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card><Statistic title="总检测量" value={data?.total_detections ?? 0} prefix={<FileSearchOutlined />} /></Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card><Statistic title="今日检测量" value={data?.today_detections ?? 0} prefix={<FileSearchOutlined />} /></Card>
         </Col>
       </Row>
 

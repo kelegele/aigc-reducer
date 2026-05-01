@@ -167,7 +167,7 @@ export default function Dashboard() {
         style={{ marginTop: 16 }}
         title="最近检测记录"
         extra={
-          <Button type="link" icon={<RightOutlined />} onClick={() => navigate("/history")}>
+          <Button type="link" icon={<RightOutlined />} onClick={() => navigate("/task-list")}>
             查看全部
           </Button>
         }

@@ -421,6 +421,35 @@ _CONFIG_MAP = {
 
 **原因**：`.env` 设置 `DEV_BYPASS_PHONE=true` 后，SMS 测试全部失败 — `verify()` 跳过了验证码校验逻辑，导致错误码、过期码、不存在的手机号全部通过验证。
 
+### Admin 绕过用户所有权的接口必须独立方法
+
+管理员需要查看任意用户的数据时（如内容管理详情页），**必须**在 service 层新增独立方法（如 `get_task_admin()`），禁止修改已有带 `user_id` 校验的方法。
+
+路由层通过 `require_admin` 守卫权限，Service 层不做 `user_id` 过滤：
+
+```python
+# service — 独立方法，不校验 user_id
+def get_task_admin(self, task_id: str) -> ReductionTask:
+    task = self.db.query(ReductionTask).filter_by(id=task_id).first()
+    if not task:
+        raise ValueError("任务不存在")
+    return task
+
+# router — require_admin 守卫
+@router.get("/tasks/{task_id}", response_model=TaskResponse)
+def get_task_detail(
+    task_id: str,
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    service = ReduceService(db)
+    return _task_to_response(service.get_task_admin(task_id))
+```
+
+复用用户端已有响应格式（`_task_to_response()`），确保 admin 详情页与用户详情页数据一致。前端也复用同一个 React 组件，仅通过 `isAdminMode` 区分 API 调用。
+
+**原因**：直接修改 `get_task(user_id)` 方法跳过 user_id 校验会破坏普通用户的权限隔离。独立方法 + admin 路由守卫 = 明确的责任边界。
+
 ### HTTP 响应头含非 ASCII 内容必须用 RFC 5987 编码
 
 任何写入 HTTP header 的用户数据（文件名、备注等）若可能含中文或其他非 ASCII 字符，**必须** URL 编码后用 `filename*=UTF-8''<encoded>` 格式，禁止直接放进 `filename="..."`。

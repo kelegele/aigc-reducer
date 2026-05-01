@@ -10,6 +10,8 @@ from aigc_web.models.credit_account import CreditAccount
 from aigc_web.models.credit_transaction import CreditTransaction
 from aigc_web.models.payment_order import PaymentOrder
 from aigc_web.models.recharge_package import RechargePackage
+from aigc_web.models.reduction_paragraph import ReductionParagraph
+from aigc_web.models.reduction_task import ReductionTask
 from aigc_web.models.system_config import SystemConfig
 from aigc_web.models.user import User
 from aigc_web.schemas.admin import PackageCreateRequest, PackageUpdateRequest
@@ -93,6 +95,65 @@ def list_users(
     return {"items": items, "total": total, "page": page, "size": size}
 
 
+# --- 内容管理（检测记录） ---
+
+def list_tasks(
+    db: Session,
+    status: str | None = None,
+    search: str | None = None,
+    page: int = 1,
+    size: int = 20,
+) -> dict:
+    """管理后台查询所有用户的检测记录，支持状态筛选和标题/手机号搜索。"""
+    query = db.query(ReductionTask)
+
+    if status == "in_progress":
+        query = query.filter(
+            ReductionTask.status.notin_(["completed", "failed", "cancelled"])
+        )
+    elif status:
+        query = query.filter_by(status=status)
+    if search:
+        query = query.join(User, User.id == ReductionTask.user_id).filter(
+            ReductionTask.title.ilike(f"%{search}%")
+            | User.phone.contains(search)
+            | ReductionTask.id.ilike(f"%{search}%")
+        )
+
+    total = query.count()
+    tasks = (
+        query.order_by(ReductionTask.created_at.desc())
+        .offset((page - 1) * size)
+        .limit(size)
+        .all()
+    )
+
+    items = []
+    for task in tasks:
+        user = db.query(User).filter_by(id=task.user_id).first()
+        paragraph_count = (
+            db.query(sa_func.count(ReductionParagraph.id))
+            .filter_by(task_id=task.id)
+            .scalar() or 0
+        )
+        items.append({
+            "id": task.id,
+            "user_id": task.user_id,
+            "user_phone": user.phone if user else "",
+            "user_nickname": user.nickname if user else "",
+            "title": task.title,
+            "status": task.status,
+            "detect_mode": task.detect_mode,
+            "style": task.style,
+            "full_reconstruct": task.full_reconstruct,
+            "total_credits": task.total_credits,
+            "paragraph_count": paragraph_count,
+            "created_at": task.created_at,
+            "completed_at": task.completed_at,
+        })
+    return {"items": items, "total": total, "page": page, "size": size}
+
+
 def adjust_credits(db: Session, user_id: int, amount: int, remark: str) -> None:
     """手动调整积分。正数加，负数减。"""
     if amount == 0:
@@ -140,6 +201,13 @@ def get_dashboard(db: Session) -> dict:
     total_consumed = db.query(sa_func.coalesce(sa_func.sum(CreditAccount.total_consumed), 0)).scalar()
     today_new = db.query(sa_func.count(User.id)).filter(User.created_at >= today_start).scalar()
 
+    total_detections = db.query(sa_func.count(ReductionTask.id)).scalar() or 0
+    today_detections = (
+        db.query(sa_func.count(ReductionTask.id))
+        .filter(ReductionTask.created_at >= today_start)
+        .scalar() or 0
+    )
+
     top_recharge = (
         db.query(
             CreditAccount.user_id,
@@ -172,6 +240,8 @@ def get_dashboard(db: Session) -> dict:
         "total_credits_granted": total_granted,
         "total_credits_consumed": total_consumed,
         "today_new_users": today_new,
+        "total_detections": total_detections,
+        "today_detections": today_detections,
         "top_recharge_users": [
             {"user_id": r.user_id, "nickname": r.nickname, "phone": r.phone, "amount": r.amount}
             for r in top_recharge
@@ -286,5 +356,64 @@ def list_transactions(
             "ref_id": tx.ref_id,
             "remark": tx.remark,
             "created_at": tx.created_at,
+        })
+    return {"items": items, "total": total, "page": page, "size": size}
+
+
+# --- 内容管理（检测记录） ---
+
+def list_tasks(
+    db: Session,
+    status: str | None = None,
+    search: str | None = None,
+    page: int = 1,
+    size: int = 20,
+) -> dict:
+    """管理后台查询所有用户的检测记录，支持状态筛选和标题/手机号搜索。"""
+    query = db.query(ReductionTask)
+
+    if status == "in_progress":
+        query = query.filter(
+            ReductionTask.status.notin_(["completed", "failed", "cancelled"])
+        )
+    elif status:
+        query = query.filter_by(status=status)
+    if search:
+        query = query.join(User, User.id == ReductionTask.user_id).filter(
+            ReductionTask.title.ilike(f"%{search}%")
+            | User.phone.contains(search)
+            | ReductionTask.id.ilike(f"%{search}%")
+        )
+
+    total = query.count()
+    tasks = (
+        query.order_by(ReductionTask.created_at.desc())
+        .offset((page - 1) * size)
+        .limit(size)
+        .all()
+    )
+
+    items = []
+    for task in tasks:
+        user = db.query(User).filter_by(id=task.user_id).first()
+        paragraph_count = (
+            db.query(sa_func.count(ReductionParagraph.id))
+            .filter_by(task_id=task.id)
+            .scalar() or 0
+        )
+        items.append({
+            "id": task.id,
+            "user_id": task.user_id,
+            "user_phone": user.phone if user else "",
+            "user_nickname": user.nickname if user else "",
+            "title": task.title,
+            "status": task.status,
+            "detect_mode": task.detect_mode,
+            "style": task.style,
+            "full_reconstruct": task.full_reconstruct,
+            "total_credits": task.total_credits,
+            "paragraph_count": paragraph_count,
+            "created_at": task.created_at,
+            "completed_at": task.completed_at,
         })
     return {"items": items, "total": total, "page": page, "size": size}

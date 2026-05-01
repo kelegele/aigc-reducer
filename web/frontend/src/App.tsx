@@ -15,6 +15,7 @@ import AdminPackages from "./pages/admin/AdminPackages";
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminTransactions from "./pages/admin/AdminTransactions";
+import AdminContent from "./pages/admin/AdminContent";
 import AdminConfig from "./pages/admin/AdminConfig";
 import MockPay from "./pages/MockPay";
 import AppLayout from "./components/AppLayout";
@@ -85,7 +86,7 @@ export default function App() {
           >
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/credits" element={<Credits />} />
-            <Route path="/history" element={<History />} />
+            <Route path="/task-list" element={<History />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/reduce/new" element={<NewTask />} />
             <Route path="/reduce/:taskId" element={<TaskWorkspace />} />
@@ -94,6 +95,8 @@ export default function App() {
             <Route path="/admin/orders" element={<AdminOrders />} />
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/transactions" element={<AdminTransactions />} />
+            <Route path="/admin/content" element={<AdminContent />} />
+            <Route path="/admin/content/:taskId" element={<TaskWorkspace />} />
             <Route path="/admin/config" element={<AdminConfig />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

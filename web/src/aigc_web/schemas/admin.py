@@ -85,6 +85,8 @@ class DashboardResponse(BaseModel):
     total_credits_granted: int
     total_credits_consumed: int
     today_new_users: int
+    total_detections: int
+    today_detections: int
     top_recharge_users: list[TopUserEntry]
     top_consume_users: list[TopUserEntry]
 
@@ -120,6 +122,31 @@ class AdminTransactionResponse(BaseModel):
 
 class AdminTransactionListResponse(BaseModel):
     items: list[AdminTransactionResponse]
+    total: int
+    page: int
+    size: int
+
+
+# --- 内容管理（检测记录） ---
+
+class AdminTaskResponse(BaseModel):
+    id: str
+    user_id: int
+    user_phone: str
+    user_nickname: str
+    title: str
+    status: str
+    detect_mode: str
+    style: str
+    full_reconstruct: bool
+    total_credits: int
+    paragraph_count: int
+    created_at: datetime
+    completed_at: datetime | None = None
+
+
+class AdminTaskListResponse(BaseModel):
+    items: list[AdminTaskResponse]
     total: int
     page: int
     size: int

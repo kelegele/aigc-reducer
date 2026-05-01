@@ -65,6 +65,8 @@ export interface DashboardResponse {
   total_credits_granted: number;
   total_credits_consumed: number;
   today_new_users: number;
+  total_detections: number;
+  today_detections: number;
   top_recharge_users: TopUserEntry[];
   top_consume_users: TopUserEntry[];
 }
@@ -159,6 +161,51 @@ export interface AdminTransactionListResponse {
   page: number;
   size: number;
 }
+
+// --- 内容管理（检测记录） ---
+
+import type { TaskResponse } from "./reduce";
+
+export interface AdminTaskResponse {
+  id: string;
+  user_id: number;
+  user_phone: string;
+  user_nickname: string;
+  title: string;
+  status: string;
+  detect_mode: string;
+  style: string;
+  full_reconstruct: boolean;
+  total_credits: number;
+  paragraph_count: number;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface AdminTaskListResponse {
+  items: AdminTaskResponse[];
+  total: number;
+  page: number;
+  size: number;
+}
+
+export async function listAdminTasks(params?: {
+  status?: string;
+  search?: string;
+  page?: number;
+  size?: number;
+}): Promise<AdminTaskListResponse> {
+  const resp = await client.get<AdminTaskListResponse>("/admin/tasks", { params });
+  return resp.data;
+}
+
+/** 管理员查看任意任务详情。 */
+export async function getAdminTask(taskId: string): Promise<TaskResponse> {
+  const resp = await client.get<TaskResponse>(`/admin/tasks/${taskId}`);
+  return resp.data;
+}
+
+// --- 流水管理 ---
 
 export async function listAdminTransactions(params?: {
   user_id?: number;
