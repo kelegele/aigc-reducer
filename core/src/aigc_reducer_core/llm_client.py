@@ -106,6 +106,7 @@ class LLMClient:
                 {"role": "user", "content": prompt},
             ],
             "max_tokens": 4096,
+            "timeout": 120,
         }
 
         if self._api_key:
