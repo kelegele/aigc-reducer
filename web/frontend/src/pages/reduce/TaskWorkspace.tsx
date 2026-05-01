@@ -41,6 +41,7 @@ import {
   confirmParagraph,
   finalizeTask,
   type TaskResponse,
+  getExportUrl,
 } from "../../api/reduce";
 import {
   TASK_STATUS,
@@ -111,6 +112,17 @@ export default function TaskWorkspace() {
 
   // ---- 结果阶段状态 ----
   const [resultTask, setResultTask] = useState<TaskResponse | null>(null);
+
+  // ---- 只读模式 ----
+  const isReadonly = task ? [TASK_STATUS.COMPLETED, TASK_STATUS.FAILED].includes(task.status as typeof TASK_STATUS.COMPLETED) : false;
+
+  // ---- 活动日志（用户可见的实时进度） ----
+  const [activityLog, setActivityLog] = useState<string[]>([]);
+  const logEndRef = useRef<HTMLDivElement | null>(null);
+  const appendLog = useCallback((msg: string) => {
+    const now = new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    setActivityLog((prev) => [...prev, `[${now}] ${msg}`]);
+  }, []);
 
   // ---- 引用 ----
   const taskRef = useRef(task);
@@ -196,12 +208,19 @@ export default function TaskWorkspace() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ---- 日志自动滚动到底部 ----
+  useEffect(() => {
+    logEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [activityLog]);
+
   // ---- 检测 SSE ----
   const startDetection = useCallback(() => {
     setDetecting(true);
     setDetectProgress(0);
     setDetectCurrent(0);
     setDetectTotal(0);
+    setActivityLog([]);
+    appendLog("开始 AI 风险检测…");
 
     const ctrl = connectSSE(
       `/api/reduce/tasks/${taskId}/detect`,
@@ -213,6 +232,8 @@ export default function TaskWorkspace() {
           setDetectCurrent(current);
           setDetectTotal(total);
           if (total > 0) setDetectProgress(Math.round((current / total) * 100));
+          const riskLabel = RISK_LEVEL_LABELS[String(data.risk_level ?? RISK_LEVEL.LOW)] ?? "";
+          appendLog(`第 ${idx + 1} 段检测完成：${riskLabel}（综合分 ${data.composite_score ?? 0}）`);
 
           // 更新段落风险
           setTask((prev) => {
@@ -233,6 +254,7 @@ export default function TaskWorkspace() {
           setSseController(null);
           setDetecting(false);
           setDetectProgress(100);
+          appendLog(`检测完成，${data.needs_processing ?? 0} 段需要改写`);
           // 刷新任务
           getTask(taskId).then((t) => {
             setTask(t);
@@ -243,12 +265,14 @@ export default function TaskWorkspace() {
           ctrl.abort();
           setSseController(null);
           setDetecting(false);
+          appendLog(`检测出错：${data.message ?? "未知错误"}`);
           message.error(String(data.message ?? "检测失败"));
         }
       },
       (error) => {
         setSseController(null);
         setDetecting(false);
+        appendLog(`检测连接失败：${error}`);
         message.error(error || "检测连接失败");
       },
     );
@@ -289,6 +313,7 @@ export default function TaskWorkspace() {
 
   const startReconstruct = useCallback(() => {
     setReconstructing(true);
+    setCurrentStep(2);
     const ctrl = connectSSE(
       `/api/reduce/tasks/${taskId}/reconstruct`,
       async (data) => {
@@ -354,6 +379,9 @@ export default function TaskWorkspace() {
     setRewriteProgress(0);
     setRewriteCurrent(0);
     setRewriteTotal(0);
+    // 同步更新 task 状态和步骤，确保 UI 立即切换到改写进度
+    setCurrentStep(3);
+    setTask((prev) => prev ? { ...prev, status: TASK_STATUS.REWRITING } : prev);
 
     const ctrl = connectSSE(
       `/api/reduce/tasks/${taskId}/rewrite`,
@@ -364,10 +392,12 @@ export default function TaskWorkspace() {
           setRewriteCurrent(current);
           setRewriteTotal(total);
           if (total > 0) setRewriteProgress(Math.round((current / total) * 100));
+          appendLog(`正在改写第 ${current}/${total} 段，生成方案 A（激进）和方案 B（保守）…`);
         } else if (data.type === "paragraph_ready") {
           const idx = Number(data.index ?? 0);
           const aggressive = String(data.aggressive ?? "");
           const conservative = String(data.conservative ?? "");
+          appendLog(`第 ${idx + 1} 段改写完成，方案 A ${aggressive.length} 字，方案 B ${conservative.length} 字`);
           setTask((prev) => {
             if (!prev) return prev;
             const newParagraphs = [...prev.paragraphs];
@@ -386,6 +416,7 @@ export default function TaskWorkspace() {
           setSseController(null);
           setRewriting(false);
           setRewriteProgress(100);
+          appendLog(`全部改写完成，共消耗积分 ${data.total_credits_used ?? 0}`);
           // 刷新完整任务状态
           getTask(taskId).then((t) => {
             setTask(t);
@@ -396,6 +427,7 @@ export default function TaskWorkspace() {
           ctrl.abort();
           setSseController(null);
           setRewriting(false);
+          appendLog(`改写出错：${data.message ?? "未知错误"}`);
           message.error(String(data.message ?? "改写失败"));
         }
       },
@@ -424,6 +456,15 @@ export default function TaskWorkspace() {
         }
         await confirmParagraph(taskId, index, choice, manualText);
         setParagraphChoices((prev) => new Map(prev).set(index, choice));
+        // 同步更新 task 中的 user_choice，使 allConfirmed 正确计算
+        setTask((prev) => {
+          if (!prev) return prev;
+          const newParagraphs = [...prev.paragraphs];
+          if (newParagraphs[index]) {
+            newParagraphs[index] = { ...newParagraphs[index], user_choice: choice, status: "confirmed" };
+          }
+          return { ...prev, paragraphs: newParagraphs };
+        });
         message.success(`段落 ${index + 1} 已确认`);
       } catch (err: unknown) {
         const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
@@ -515,12 +556,12 @@ export default function TaskWorkspace() {
 
   const allConfirmed = useMemo(() => {
     if (!task) return false;
-    const needConfirm = task.paragraphs.filter(
-      (p) => p.risk_level && p.risk_level !== RISK_LEVEL.LOW && p.status === TASK_STATUS.REWRITTEN,
+    const needsProcessing = task.paragraphs.filter(
+      (p) => p.risk_level && p.risk_level !== RISK_LEVEL.LOW,
     );
-    if (needConfirm.length === 0) return false;
-    return needConfirm.every((p) => paragraphChoices.has(p.index) || p.user_choice);
-  }, [task, paragraphChoices]);
+    if (needsProcessing.length === 0) return false;
+    return needsProcessing.every((p) => !!p.user_choice);
+  }, [task]);
 
   const paragraphsNeedingReview = useMemo(() => {
     if (!task) return [];
@@ -578,6 +619,29 @@ export default function TaskWorkspace() {
           <Text type="secondary">
             正在检测 {detectCurrent}/{detectTotal} 段...
           </Text>
+          {activityLog.length > 0 && (
+            <div
+              className="activity-log"
+              style={{
+                marginTop: 16,
+                textAlign: "left",
+                maxHeight: 200,
+                overflow: "auto",
+                padding: "8px 12px",
+                background: themeToken.colorBgLayout,
+                borderRadius: 6,
+                fontSize: 12,
+                lineHeight: 1.8,
+                fontFamily: "monospace",
+                color: themeToken.colorTextSecondary,
+              }}
+            >
+              {activityLog.map((line, i) => (
+                <div key={i}>{line}</div>
+              ))}
+              <div ref={logEndRef} />
+            </div>
+          )}
         </Card>
       )}
 
@@ -694,6 +758,29 @@ export default function TaskWorkspace() {
           <Text type="secondary">
             正在改写 {rewriteCurrent}/{rewriteTotal} 段...
           </Text>
+          {activityLog.length > 0 && (
+            <div
+              className="activity-log"
+              style={{
+                marginTop: 20,
+                textAlign: "left",
+                maxHeight: 280,
+                overflow: "auto",
+                padding: "12px 16px",
+                background: themeToken.colorBgLayout,
+                borderRadius: 8,
+                fontSize: 12,
+                lineHeight: 2,
+                fontFamily: "monospace",
+                color: themeToken.colorTextSecondary,
+              }}
+            >
+              {activityLog.map((line, i) => (
+                <div key={i}>{line}</div>
+              ))}
+              <div ref={logEndRef} />
+            </div>
+          )}
         </Card>
       );
     }
@@ -774,7 +861,7 @@ export default function TaskWorkspace() {
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {paragraphsNeedingReview.map((p) => {
         const isExpanded = expandedCards.has(p.index);
-        const confirmed = paragraphChoices.has(p.index) || !!p.user_choice;
+        const confirmed = !!p.user_choice;
         const choice = paragraphChoices.get(p.index) ?? (p.user_choice as ParagraphChoice | undefined);
 
         return (
@@ -845,13 +932,9 @@ export default function TaskWorkspace() {
                 {/* 方案选择 */}
                 <Radio.Group
                   value={choice ?? null}
-                  onChange={async (e) => {
+                  onChange={(e) => {
                     const selected = e.target.value as ParagraphChoice;
-                    if (selected === PARAGRAPH_CHOICE.MANUAL) {
-                      setParagraphChoices((prev) => new Map(prev).set(p.index, selected));
-                    } else {
-                      await handleConfirmParagraph(p.index, selected);
-                    }
+                    setParagraphChoices((prev) => new Map(prev).set(p.index, selected));
                   }}
                   style={{ width: "100%" }}
                 >
@@ -965,6 +1048,27 @@ export default function TaskWorkspace() {
           </Card>
         );
       })}
+      {/* 全部已选择后显示统一提交按钮 */}
+      {paragraphsNeedingReview.length > 0 &&
+        paragraphsNeedingReview.every((p) => paragraphChoices.has(p.index) || p.user_choice) &&
+        !paragraphsNeedingReview.every((p) => !!p.user_choice) && (
+        <Card style={{ textAlign: "center", padding: 16 }}>
+          <Button
+            type="primary"
+            size="large"
+            loading={confirmingIndex !== null}
+            onClick={async () => {
+              for (const p of paragraphsNeedingReview) {
+                if (p.user_choice) continue;
+                const c = paragraphChoices.get(p.index);
+                if (c) await handleConfirmParagraph(p.index, c);
+              }
+            }}
+          >
+            确认提交
+          </Button>
+        </Card>
+      )}
     </div>
   );
 
@@ -976,7 +1080,7 @@ export default function TaskWorkspace() {
     }
 
     const p = currentWizardPara;
-    const confirmed = paragraphChoices.has(p.index) || !!p.user_choice;
+    const confirmed = !!p.user_choice;
     const choice = paragraphChoices.get(p.index) ?? (p.user_choice as ParagraphChoice | undefined);
 
     return (
@@ -1036,7 +1140,7 @@ export default function TaskWorkspace() {
                     cursor: confirmed ? "default" : "pointer",
                   }}
                   onClick={() => {
-                    if (!confirmed) handleConfirmParagraph(p.index, PARAGRAPH_CHOICE.AGGRESSIVE);
+                    if (!confirmed) setParagraphChoices((prev) => new Map(prev).set(p.index, PARAGRAPH_CHOICE.AGGRESSIVE));
                   }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
@@ -1069,7 +1173,7 @@ export default function TaskWorkspace() {
                     cursor: confirmed ? "default" : "pointer",
                   }}
                   onClick={() => {
-                    if (!confirmed) handleConfirmParagraph(p.index, PARAGRAPH_CHOICE.CONSERVATIVE);
+                    if (!confirmed) setParagraphChoices((prev) => new Map(prev).set(p.index, PARAGRAPH_CHOICE.CONSERVATIVE));
                   }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
@@ -1094,8 +1198,9 @@ export default function TaskWorkspace() {
                 <Space>
                   <Button
                     size="small"
-                    onClick={() => handleConfirmParagraph(p.index, PARAGRAPH_CHOICE.ORIGINAL)}
+                    onClick={() => setParagraphChoices((prev) => new Map(prev).set(p.index, PARAGRAPH_CHOICE.ORIGINAL))}
                     disabled={confirmed}
+                    type={choice === PARAGRAPH_CHOICE.ORIGINAL ? "primary" : "default"}
                   >
                     保留原文
                   </Button>
@@ -1105,6 +1210,7 @@ export default function TaskWorkspace() {
                       setParagraphChoices((prev) => new Map(prev).set(p.index, PARAGRAPH_CHOICE.MANUAL));
                     }}
                     disabled={confirmed}
+                    type={choice === PARAGRAPH_CHOICE.MANUAL ? "primary" : "default"}
                   >
                     手动输入
                   </Button>
@@ -1135,7 +1241,7 @@ export default function TaskWorkspace() {
           </Col>
         </Row>
 
-        {/* 导航按钮 */}
+        {/* 导航 + 提交按钮 */}
         <div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 16 }}>
           <Button
             icon={<LeftOutlined />}
@@ -1144,6 +1250,23 @@ export default function TaskWorkspace() {
           >
             上一段
           </Button>
+          {wizardIndex === paragraphsNeedingReview.length - 1 &&
+            paragraphsNeedingReview.every((pp) => paragraphChoices.has(pp.index) || pp.user_choice) &&
+            !paragraphsNeedingReview.every((pp) => !!pp.user_choice) && (
+            <Button
+              type="primary"
+              loading={confirmingIndex !== null}
+              onClick={async () => {
+                for (const pp of paragraphsNeedingReview) {
+                  if (pp.user_choice) continue;
+                  const c = paragraphChoices.get(pp.index);
+                  if (c) await handleConfirmParagraph(pp.index, c);
+                }
+              }}
+            >
+              确认提交
+            </Button>
+          )}
           <Button
             icon={<RightOutlined />}
             disabled={wizardIndex >= paragraphsNeedingReview.length - 1}
@@ -1298,13 +1421,59 @@ export default function TaskWorkspace() {
           <Space>
             <Button
               type="primary"
+              icon={<DownloadOutlined />}
+              onClick={async () => {
+                try {
+                  const token = localStorage.getItem("access_token");
+                  const resp = await fetch(getExportUrl(t.id, "docx"), {
+                    headers: { Authorization: `Bearer ${token}` },
+                  });
+                  if (!resp.ok) {
+                    const body = await resp.json().catch(() => ({}));
+                    message.error(body.detail || "导出失败");
+                    return;
+                  }
+                  const blob = await resp.blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `${t.title.slice(0, 50) || "result"}.docx`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                } catch { message.error("导出失败"); }
+              }}
+            >
+              导出 Word
+            </Button>
+            <Button
               icon={<FileTextOutlined />}
+              onClick={async () => {
+                try {
+                  const token = localStorage.getItem("access_token");
+                  const resp = await fetch(getExportUrl(t.id, "markdown"), {
+                    headers: { Authorization: `Bearer ${token}` },
+                  });
+                  if (!resp.ok) {
+                    const body = await resp.json().catch(() => ({}));
+                    message.error(body.detail || "导出失败");
+                    return;
+                  }
+                  const blob = await resp.blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `${t.title.slice(0, 50) || "result"}.md`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                } catch { message.error("导出失败"); }
+              }}
+            >
+              导出 Markdown
+            </Button>
+            <Button
               onClick={() => copyText(t.reduced_text ?? "", "改写结果")}
             >
-              复制改写结果
-            </Button>
-            <Button onClick={() => navigate("/history")}>
-              查看历史
+              复制全文
             </Button>
             <Button onClick={() => navigate("/reduce/new")}>
               新建任务
@@ -1348,7 +1517,19 @@ export default function TaskWorkspace() {
         </Tag>
       </div>
 
-      <Steps current={currentStep} items={steps} size="small" style={{ marginBottom: 24 }} />
+      <Steps current={currentStep} items={steps} size="small" style={{ marginBottom: 24, display: isReadonly ? "none" : "block" }} />
+
+      {isReadonly && task.status === TASK_STATUS.FAILED && (
+        <Card style={{ marginBottom: 16, textAlign: "center" }}>
+          <ExclamationCircleOutlined style={{ fontSize: 36, color: themeToken.colorError, marginBottom: 12 }} />
+          <Title level={5} style={{ color: themeToken.colorError }}>任务失败</Title>
+          <Text type="secondary">任务在执行过程中遇到错误，以下是已完成的检测结果。</Text>
+          <div style={{ marginTop: 16 }}>
+            <Button type="primary" onClick={() => navigate("/reduce/new")}>新建任务</Button>
+            <Button style={{ marginLeft: 8 }} onClick={() => navigate(-1)}>返回</Button>
+          </div>
+        </Card>
+      )}
 
       {currentStep === 0 && (
         <div style={{ textAlign: "center", padding: "80px 0" }}>

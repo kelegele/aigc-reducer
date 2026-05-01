@@ -93,12 +93,19 @@ export async function createTask(data: {
 }
 
 /** 任务列表 */
-export async function getTasks(
-  page = 1,
-  pageSize = 10,
-): Promise<TaskListResponse> {
+export async function getTasks(params: {
+  page?: number;
+  page_size?: number;
+  status?: string;
+  keyword?: string;
+}): Promise<TaskListResponse> {
   const resp = await client.get<TaskListResponse>("/reduce/tasks", {
-    params: { page, page_size: pageSize },
+    params: {
+      page: params.page ?? 1,
+      page_size: params.page_size ?? 10,
+      ...(params.status ? { status: params.status } : {}),
+      ...(params.keyword ? { keyword: params.keyword } : {}),
+    },
   });
   return resp.data;
 }
@@ -144,6 +151,11 @@ export async function confirmParagraph(
 export async function finalizeTask(taskId: number): Promise<TaskResponse> {
   const resp = await client.post<TaskResponse>(`/reduce/tasks/${taskId}/finalize`);
   return resp.data;
+}
+
+/** 导出任务结果 */
+export function getExportUrl(taskId: string, format: "markdown" | "docx" = "markdown"): string {
+  return `/api/reduce/tasks/${taskId}/export?format=${format}`;
 }
 
 // --- SSE Helper ---

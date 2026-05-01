@@ -7,7 +7,7 @@ import tempfile
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from sqlalchemy.orm import Session
 
 from aigc_web.database import get_db
@@ -73,11 +73,13 @@ async def create_task(
 def list_tasks(
     page: int = 1,
     page_size: int = 10,
+    status: Optional[str] = None,
+    keyword: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_current_user),
 ):
     service = ReduceService(db)
-    tasks, total = service.list_tasks(current_user.id, page, page_size)
+    tasks, total = service.list_tasks(current_user.id, page, page_size, status, keyword)
     return {
         "items": [_task_to_list_item(t) for t in tasks],
         "total": total,
@@ -197,6 +199,47 @@ def finalize_task(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     return _task_to_response(task)
+
+
+@reduce_router.get("/tasks/{task_id}/export")
+def export_task(
+    task_id: str,
+    format: str = "markdown",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_current_user),
+):
+    """导出任务结果。format: markdown | docx"""
+    import logging
+    logger = logging.getLogger(__name__)
+    try:
+        service = ReduceService(db)
+        task = service.get_task(task_id, current_user.id)
+    except Exception as e:
+        logger.error("[export] get_task failed: %s", e, exc_info=True)
+        raise
+
+    if task.status != "completed":
+        raise HTTPException(status_code=400, detail="任务尚未完成，无法导出")
+
+    if format == "docx":
+        from aigc_web.services.reduce import export_docx
+
+        buf = export_docx(task)
+        filename = f"{task.title[:50] or 'result'}.docx"
+        return Response(
+            content=buf.read(),
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+    # 默认 markdown
+    content = task.reduced_text or ""
+    filename = f"{task.title[:50] or 'result'}.md"
+    return Response(
+        content=content.encode("utf-8"),
+        media_type="text/markdown; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 # ── 辅助函数 ──

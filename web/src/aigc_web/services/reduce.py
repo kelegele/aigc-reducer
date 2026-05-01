@@ -2,8 +2,11 @@
 """P3 检测/改写业务逻辑。"""
 
 import asyncio
+import io
 import json
+import logging
 import threading
+import time
 from typing import AsyncGenerator
 
 from sqlalchemy.orm import Session
@@ -18,6 +21,8 @@ from aigc_web.config import settings
 from aigc_web.models.reduction_paragraph import ReductionParagraph
 from aigc_web.models.reduction_task import ReductionTask
 from aigc_web.services import credit as credit_service
+
+logger = logging.getLogger(__name__)
 
 
 class ReduceService:
@@ -101,6 +106,10 @@ class ReduceService:
         task.status = "detecting"
         self.db.commit()
         self.db.refresh(task)
+        logger.info(
+            "[create_task] task=%s user=%d mode=%s style=%s paragraphs=%d",
+            task.id[:8], user_id, detect_mode, style, len(paragraphs),
+        )
         return task
 
     # ── 检测（SSE） ──
@@ -109,8 +118,12 @@ class ReduceService:
         """启动检测，SSE 生成器。detecting 状态视为上次中断，重置后重新检测。"""
         task = self._get_task(task_id)
         if task.status not in ("detecting", "detected"):
+            logger.warning("[detect] task=%s invalid status=%s", task_id[:8], task.status)
             yield {"type": "error", "message": f"任务状态不正确: {task.status}"}
             return
+
+        logger.info("[detect] task=%s start, mode=%s", task_id[:8], task.detect_mode)
+        t0 = time.time()
 
         # detecting 状态 = 上次中断，重置段落检测结果
         if task.status == "detecting":
@@ -121,6 +134,7 @@ class ReduceService:
                 p.needs_processing = False
                 p.status = "pending"
             self.db.flush()
+            logger.info("[detect] task=%s reset interrupted paragraphs", task_id[:8])
 
         paragraphs = self._get_paragraphs(task_id)
         parsed = [
@@ -140,6 +154,7 @@ class ReduceService:
             cost = self._tokens_to_credits(est)
             balance = credit_service.get_balance(self.db, task.user_id)
             if balance < cost:
+                logger.warning("[detect] task=%s insufficient balance=%d cost=%d", task_id[:8], balance, cost)
                 yield {
                     "type": "error",
                     "message": f"积分不足，预计需要 {cost} 积分",
@@ -159,11 +174,13 @@ class ReduceService:
         except CancelledError:
             task.status = "failed"
             self.db.commit()
+            logger.info("[detect] task=%s cancelled", task_id[:8])
             yield {"type": "error", "message": "检测已取消"}
             return
         except Exception as e:
             task.status = "failed"
             self.db.commit()
+            logger.error("[detect] task=%s failed: %s", task_id[:8], e, exc_info=True)
             yield {"type": "error", "message": f"检测失败: {e}"}
             return
 
@@ -202,6 +219,7 @@ class ReduceService:
             )
             task.total_tokens += est
             task.total_credits += cost
+            logger.info("[detect] task=%s LLM billed: tokens=%d credits=%d", task_id[:8], est, cost)
 
         try:
             task.status = "detected"
@@ -210,8 +228,15 @@ class ReduceService:
             self.db.rollback()
             task.status = "failed"
             self.db.commit()
+            logger.error("[detect] task=%s commit failed: %s", task_id[:8], e, exc_info=True)
             yield {"type": "error", "message": f"保存检测结果失败: {e}"}
             return
+
+        elapsed = time.time() - t0
+        logger.info(
+            "[detect] task=%s done: total=%d needs_processing=%d elapsed=%.1fs",
+            task_id[:8], total, needs_processing_count, elapsed,
+        )
 
         yield {
             "type": "complete",
@@ -225,8 +250,12 @@ class ReduceService:
         """全量语义重构（可选步骤）。"""
         task = self._get_task(task_id)
         if task.status != "detected":
+            logger.warning("[reconstruct] task=%s invalid status=%s", task_id[:8], task.status)
             yield {"type": "error", "message": f"任务状态不正确: {task.status}"}
             return
+
+        logger.info("[reconstruct] task=%s start", task_id[:8])
+        t0 = time.time()
 
         paragraphs = self._get_paragraphs(task_id)
         full_text = "\n\n".join(p.original_text for p in paragraphs)
@@ -236,6 +265,7 @@ class ReduceService:
         cost = self._tokens_to_credits(est)
         balance = credit_service.get_balance(self.db, task.user_id)
         if balance < cost:
+            logger.warning("[reconstruct] task=%s insufficient balance=%d cost=%d", task_id[:8], balance, cost)
             yield {
                 "type": "error",
                 "message": f"积分不足，预计需要 {cost} 积分",
@@ -258,11 +288,13 @@ class ReduceService:
                 conservative=False,
             )
         except CancelledError:
+            logger.info("[reconstruct] task=%s cancelled", task_id[:8])
             yield {"type": "error", "message": "重构已取消"}
             return
         except Exception as e:
             task.status = "failed"
             self.db.commit()
+            logger.error("[reconstruct] task=%s failed: %s", task_id[:8], e, exc_info=True)
             yield {"type": "error", "message": f"重构失败: {e}"}
             return
 
@@ -286,6 +318,8 @@ class ReduceService:
         task.full_reconstruct = True
 
         self.db.commit()
+        elapsed = time.time() - t0
+        logger.info("[reconstruct] task=%s done: credits=%d elapsed=%.1fs", task_id[:8], cost, elapsed)
         yield {"type": "complete", "credits_used": cost}
 
     # ── 改写（SSE） ──
@@ -294,6 +328,7 @@ class ReduceService:
         """启动改写，SSE 生成器。对 needs_processing 的段落生成 A/B 选项。"""
         task = self._get_task(task_id)
         if task.status not in ("detected", "rewriting"):
+            logger.warning("[rewrite] task=%s invalid status=%s", task_id[:8], task.status)
             yield {"type": "error", "message": f"任务状态不正确: {task.status}"}
             return
 
@@ -302,11 +337,14 @@ class ReduceService:
 
         paragraphs = [p for p in self._get_paragraphs(task_id) if p.needs_processing]
         if not paragraphs:
-            # 没有需要改写的段落，直接标记完成
             task.status = "rewritten"
             self.db.commit()
+            logger.info("[rewrite] task=%s no paragraphs need processing, done", task_id[:8])
             yield {"type": "complete", "total_credits_used": 0}
             return
+
+        logger.info("[rewrite] task=%s start: %d paragraphs to rewrite", task_id[:8], len(paragraphs))
+        t0 = time.time()
 
         cancel_event = threading.Event()
         rewriter = Rewriter(
@@ -326,6 +364,10 @@ class ReduceService:
             if balance < cost:
                 task.status = "failed"
                 self.db.commit()
+                logger.warning(
+                    "[rewrite] task=%s insufficient balance at para %d: balance=%d cost=%d",
+                    task_id[:8], i, balance, cost,
+                )
                 yield {
                     "type": "error",
                     "message": f"积分不足，段落 {i + 1} 预计需要 {cost} 积分",
@@ -335,6 +377,7 @@ class ReduceService:
             yield {"type": "progress", "current": i + 1, "total": total}
 
             detection = para.detection_result or {}
+            para_t0 = time.time()
 
             try:
                 aggressive = await asyncio.to_thread(
@@ -352,11 +395,15 @@ class ReduceService:
             except CancelledError:
                 task.status = "failed"
                 self.db.commit()
+                logger.info("[rewrite] task=%s cancelled at para %d", task_id[:8], i)
                 yield {"type": "error", "message": "改写已取消"}
                 return
             except Exception as e:
                 task.status = "failed"
                 self.db.commit()
+                logger.error(
+                    "[rewrite] task=%s para %d failed: %s", task_id[:8], i, e, exc_info=True,
+                )
                 yield {"type": "error", "message": f"改写失败: {e}"}
                 return
 
@@ -377,6 +424,12 @@ class ReduceService:
             task.total_tokens += est
             task.total_credits += cost
 
+            para_elapsed = time.time() - para_t0
+            logger.info(
+                "[rewrite] task=%s para %d/%d done: index=%d est_tokens=%d credits=%d elapsed=%.1fs",
+                task_id[:8], i + 1, total, para.index, est, cost, para_elapsed,
+            )
+
             yield {
                 "type": "paragraph_ready",
                 "index": para.index,
@@ -386,6 +439,11 @@ class ReduceService:
 
         task.status = "rewritten"
         self.db.commit()
+        elapsed = time.time() - t0
+        logger.info(
+            "[rewrite] task=%s all done: paragraphs=%d total_credits=%d elapsed=%.1fs",
+            task_id[:8], total, total_credits, elapsed,
+        )
         yield {"type": "complete", "total_credits_used": total_credits}
 
     # ── 段落确认 ──
@@ -420,6 +478,7 @@ class ReduceService:
 
         para.status = "confirmed"
         self.db.commit()
+        logger.info("[confirm] task=%s para=%d choice=%s", task_id[:8], index, choice)
         return para
 
     # ── 任务完成 ──
@@ -447,6 +506,7 @@ class ReduceService:
         task.status = "completed"
         self.db.commit()
         self.db.refresh(task)
+        logger.info("[finalize] task=%s done: %d paragraphs", task_id[:8], len(paragraphs))
         return task
 
     # ── 查询 ──
@@ -463,14 +523,29 @@ class ReduceService:
         return task
 
     def list_tasks(
-        self, user_id: int, page: int = 1, page_size: int = 10
+        self,
+        user_id: int,
+        page: int = 1,
+        page_size: int = 10,
+        status: str | None = None,
+        keyword: str | None = None,
     ) -> tuple[list[ReductionTask], int]:
-        """分页查询用户的改写任务。"""
+        """分页查询用户的改写任务，支持状态筛选和标题搜索。"""
         query = (
             self.db.query(ReductionTask)
             .filter_by(user_id=user_id)
             .order_by(ReductionTask.created_at.desc())
         )
+        if status == "in_progress":
+            query = query.filter(
+                ReductionTask.status.notin_(["completed", "failed"])
+            )
+        elif status:
+            query = query.filter_by(status=status)
+        if keyword:
+            query = query.filter(
+                ReductionTask.title.ilike(f"%{keyword}%")
+            )
         total = query.count()
         tasks = query.offset((page - 1) * page_size).limit(page_size).all()
         return tasks, total
@@ -540,3 +615,23 @@ def _parse_document_sync(file_path: str) -> list[Paragraph]:
     from aigc_reducer_core.parser import parse_document
 
     return parse_document(file_path)
+
+
+def export_docx(task: ReductionTask) -> io.BytesIO:
+    """将改写结果导出为 DOCX 文件。"""
+    from docx import Document
+
+    doc = Document()
+    paragraphs = sorted(task.paragraphs, key=lambda p: p.index)
+    for p in paragraphs:
+        text = p.final_text or p.original_text
+        if p.is_heading:
+            doc.add_heading(text, level=2)
+        else:
+            doc.add_paragraph(text)
+
+    buf = io.BytesIO()
+    doc.save(buf)
+    buf.seek(0)
+    logger.info("[export] task=%s exported as docx", task.id[:8])
+    return buf
