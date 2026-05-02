@@ -441,6 +441,10 @@ _CONFIG_MAP = {
 
 新增可配置项时，只需在 `_CONFIG_MAP` 注册即可，无需改动加载/更新逻辑。
 
+**敏感配置不设硬编码默认值**：CPT 等商业敏感配置**禁止**在 docker-compose.yml 设 `${VAR:-1.0}` 这种有效 fallback，config.py 默认值必须为 0（表示未配置）。代码在消费前校验 > 0，未配置时拒绝操作并提示"配置异常，请联系管理员"。
+
+**DB 初始化 seed 数据必须用 migration**：`system_config` 初始值通过 alembic migration 插入，用 `ON CONFLICT (key) DO NOTHING` 保护已有数据。禁止在 `load_config_from_db()` 中硬编码 fallback 插入。
+
 **原因**：`CREDITS_PER_1K_TOKENS` 只存在内存 settings 中，运行时通过后台修改生效，但重启后恢复默认值 1.0，导致积分计费不一致。
 
 ### 测试环境隔离
@@ -504,6 +508,20 @@ if existing:
 终端状态集合：`completed`、`failed`、`cancelled`。进行中判断：`status NOT IN (completed, failed, cancelled)`。
 
 **原因**：cancelled 状态后加入模型，History/Dashboard/AdminContent 等多处筛选下拉框遗漏此状态，导致已停止任务不可见或被误导为"进行中"。
+
+### 错误提示禁止暴露内部技术细节
+
+向后端返回给用户的错误信息**禁止**包含内部变量名、字段名、配置键名等技术细节。使用通俗易懂的中文描述即可。
+
+```python
+# 错误 — 暴露了 CREDITS_PER_1K_TOKENS 内部字段名
+raise ValueError("系统未配置积分汇率（CREDITS_PER_1K_TOKENS），请联系管理员")
+
+# 正确 — 只说明问题，不暴露技术细节
+raise ValueError("积分配置异常，请联系管理员")
+```
+
+**原因**：用户不需要知道 `CREDITS_PER_1K_TOKENS` 是什么。暴露内部命名不仅无用，还可能泄露定价策略（CPT 是商业机密）。
 
 ### HTTP 响应头含非 ASCII 内容必须用 RFC 5987 编码
 
