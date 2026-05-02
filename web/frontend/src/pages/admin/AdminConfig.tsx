@@ -35,7 +35,17 @@ export default function AdminConfig() {
       <Title level={4}>积分配置</Title>
       <Card style={{ maxWidth: 500 }}>
         <Form form={form} layout="vertical">
-          <Form.Item name="credits_per_1k_tokens" label="每 1000 Token 积分价格" rules={[{ required: true }]}>
+          <Form.Item
+            name="credits_per_1k_tokens"
+            label="每 1000 Token 积分价格"
+            rules={[
+              { required: true, message: "请输入积分价格" },
+              {
+                validator: (_, value) =>
+                  value > 0 ? Promise.resolve() : Promise.reject(new Error("积分价格必须大于 0")),
+              },
+            ]}
+          >
             <InputNumber min={0.01} step={0.1} style={{ width: "100%" }} />
           </Form.Item>
           <Form.Item name="new_user_bonus_credits" label="新人赠送积分" rules={[{ required: true }]}>
